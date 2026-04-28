@@ -5,7 +5,8 @@ MozPay is a mobile-first digital earning platform targeting the Mozambican marke
 
 ## Tech Stack
 - **Frontend**: Vanilla HTML5, CSS3, JavaScript (ES6+) — no frameworks
-- **Server**: Node.js static file server (native `http` module)
+- **Server**: Node.js HTTP server (native `http`) — serves static files + `/api/sms-webhook` and `/api/health`
+- **Backend data**: Supabase (auth, wallets, transactions, system_settings, sms_log, pending_payments) with realtime subscriptions used by the deposit/investment flow
 - **Fonts**: Google Fonts (Inter, Hanken Grotesk, DM Sans, Space Grotesk)
 
 ## Project Layout
@@ -18,7 +19,8 @@ MozPay is a mobile-first digital earning platform targeting the Mozambican marke
     ├── app.js               # Authentication and UI transition logic
     ├── home.js              # Dashboard and transaction simulation logic
     ├── styles.css           # Global styles
-    ├── server.js            # Node.js static file server (Port 5000, host 0.0.0.0)
+    ├── server.js            # Node.js HTTP server (Port 5000, host 0.0.0.0) — static + SMS webhook
+    ├── SMS_FORWARDER_SETUP.md # End-user guide to wire the SMS Forwarder Android app to the webhook
     ├── assets/              # Logos, backgrounds, currency notes
     ├── fotos/               # Hero carousel images
     └── tela de levantamento/ # Withdrawal screen assets

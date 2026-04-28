@@ -819,6 +819,85 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ════════════════════════════════════════════════════════════
+                 SMS FORWARDER — Verificação automática de transferências
+                 ════════════════════════════════════════════════════════════ -->
+            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-3">Verificação Automática SMS</h3>
+            <div class="section animate-enter stagger-3">
+                <p style="color:var(--text-secondary); margin-bottom:16px; font-size:14px;">
+                    Configura o webhook que recebe SMS da app <strong>SMS Forwarder</strong> instalada no telemóvel com o SIM de recebimento. Quando uma transferência chega, o SMS é encaminhado para o servidor MozPay, que regista a mensagem no Supabase. A tela "Aguardando confirmação" do utilizador detecta o SMS em tempo real e credita o saldo / activa o nível automaticamente. Vê o ficheiro <code>SMS_FORWARDER_SETUP.md</code> para o passo-a-passo completo.
+                </p>
+
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column: 1 / -1; background: rgba(124,58,237,0.04); padding: 16px; border-radius: var(--radius-md); border: 1px solid rgba(124,58,237,0.25);">
+                        <label class="form-label">URL do Webhook (copia para a app SMS Forwarder)</label>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" class="form-input mono-num" id="smsWebhookUrl" readonly style="font-size:13px;">
+                            <button class="btn-primary" style="padding:10px 14px; white-space:nowrap;" onclick="copyToClipboard('smsWebhookUrl')">Copiar</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1; background: rgba(229,9,20,0.04); padding: 16px; border-radius: var(--radius-md); border: 1px solid rgba(229,9,20,0.25);">
+                        <label class="form-label">Chave-secreta (cabeçalho <code>X-Webhook-Secret</code>)</label>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" class="form-input mono-num" id="smsWebhookSecret" readonly placeholder="Ainda não gerada — clique em 'Gerar' para criar" style="font-size:13px;">
+                            <button class="btn-primary" style="padding:10px 14px; white-space:nowrap;" onclick="copyToClipboard('smsWebhookSecret')">Copiar</button>
+                            <button class="btn-primary" style="padding:10px 14px; white-space:nowrap; background:var(--amber);" onclick="regenSmsWebhookSecret()">Gerar / Regenerar</button>
+                        </div>
+                        <p style="color:var(--text-secondary); margin-top:8px; font-size:12px;">⚠️ Ao regenerar, tens de actualizar a chave também na app SMS Forwarder, senão os SMS vão deixar de ser aceites.</p>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1; margin-top: 4px;">
+                        <button class="btn-primary" style="background:var(--blue); padding:10px 18px;" onclick="testSmsWebhook()">Testar conexão (envia um SMS fictício)</button>
+                        <span id="smsTestResult" style="margin-left:12px; font-size:13px; color:var(--text-secondary);"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Últimas mensagens recebidas -->
+            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-4">Últimas mensagens recebidas (sms_log)</h3>
+            <div class="section animate-enter stagger-4">
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="text-align:left; color:var(--text-secondary); border-bottom:1px solid var(--border);">
+                                <th style="padding:8px;">Quando</th>
+                                <th style="padding:8px;">Remetente</th>
+                                <th style="padding:8px;">Mensagem</th>
+                                <th style="padding:8px;">Pedido</th>
+                            </tr>
+                        </thead>
+                        <tbody id="smsLogTbody">
+                            <tr><td colspan="4" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button class="btn-primary" style="background:var(--text-secondary); padding:8px 14px; margin-top:12px; font-size:13px;" onclick="loadSmsLog()">Actualizar</button>
+            </div>
+
+            <!-- Pedidos pendentes -->
+            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-5">Pedidos pendentes (pending_payments)</h3>
+            <div class="section animate-enter stagger-5">
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="text-align:left; color:var(--text-secondary); border-bottom:1px solid var(--border);">
+                                <th style="padding:8px;">Quando</th>
+                                <th style="padding:8px;">Tipo</th>
+                                <th style="padding:8px;">Método</th>
+                                <th style="padding:8px;">Valor</th>
+                                <th style="padding:8px;">Estado</th>
+                                <th style="padding:8px;">Acções</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingTbody">
+                            <tr><td colspan="6" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button class="btn-primary" style="background:var(--text-secondary); padding:8px 14px; margin-top:12px; font-size:13px;" onclick="loadPendingPayments()">Actualizar</button>
+            </div>
         </div>
 
     </main>
@@ -1557,6 +1636,157 @@
             showToast('Contas guardadas com sucesso!', 'success');
         } catch(e) { showToast('Erro ao guardar contas', 'error'); }
     }
+
+    /* ────────────────────────────────────────────────────────────
+       SMS Forwarder admin functions
+       ──────────────────────────────────────────────────────────── */
+    function copyToClipboard(elId) {
+        const el = document.getElementById(elId);
+        if (!el || !el.value) { showToast('Nada para copiar', 'error'); return; }
+        navigator.clipboard.writeText(el.value).then(
+            () => showToast('Copiado para a área de transferência', 'success'),
+            () => showToast('Não foi possível copiar', 'error')
+        );
+    }
+
+    async function loadSmsWebhookConfig() {
+        const urlEl    = document.getElementById('smsWebhookUrl');
+        const secretEl = document.getElementById('smsWebhookSecret');
+        if (urlEl) urlEl.value = `${location.origin}/api/sms-webhook`;
+        try {
+            const { data } = await db.from('system_settings')
+                .select('value').eq('key', 'sms_webhook_secret').maybeSingle();
+            if (secretEl) secretEl.value = data?.value || '';
+        } catch (e) { console.warn('Could not load webhook secret:', e); }
+    }
+
+    async function regenSmsWebhookSecret() {
+        if (!confirm('Tens a certeza? Vais ter de actualizar a chave também na app SMS Forwarder, senão os SMS deixam de ser aceites.')) return;
+        const bytes = new Uint8Array(24);
+        crypto.getRandomValues(bytes);
+        const secret = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+        try {
+            await db.from('system_settings').upsert({ key: 'sms_webhook_secret', value: secret }, { onConflict: 'key' });
+            document.getElementById('smsWebhookSecret').value = secret;
+            showToast('Chave gerada com sucesso', 'success');
+        } catch (e) { showToast('Erro ao gerar chave', 'error'); }
+    }
+
+    async function testSmsWebhook() {
+        const resultEl = document.getElementById('smsTestResult');
+        const secret = document.getElementById('smsWebhookSecret').value.trim();
+        if (!secret) { resultEl.textContent = '⚠ Gere primeiro a chave-secreta.'; return; }
+        resultEl.textContent = 'A enviar SMS de teste…';
+        try {
+            const r = await fetch('/api/sms-webhook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': secret },
+                body: JSON.stringify({
+                    from: 'M-Pesa',
+                    text: 'TESTE MozPay: confirmacao de teste, valor 1.00 MT. ID: TEST' + Date.now(),
+                    sentStamp: Date.now()
+                })
+            });
+            const j = await r.json();
+            if (r.ok && j.ok) {
+                resultEl.innerHTML = '<span style="color:var(--green)">✓ Funcionou! O SMS de teste deve aparecer na tabela abaixo.</span>';
+                setTimeout(loadSmsLog, 800);
+            } else {
+                resultEl.innerHTML = `<span style="color:var(--red)">✗ Falhou (${r.status}): ${j.error || 'erro desconhecido'}</span>`;
+            }
+        } catch (e) {
+            resultEl.innerHTML = `<span style="color:var(--red)">✗ Erro de rede: ${e.message}</span>`;
+        }
+    }
+
+    async function loadSmsLog() {
+        const tbody = document.getElementById('smsLogTbody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>';
+        try {
+            const { data, error } = await db.from('sms_log')
+                .select('*').order('received_at', { ascending: false }).limit(30);
+            if (error) throw error;
+            if (!data || !data.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; color:var(--text-secondary); text-align:center;">Ainda nenhum SMS recebido.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(r => `
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:8px; white-space:nowrap;">${new Date(r.received_at).toLocaleString('pt-PT')}</td>
+                    <td style="padding:8px; font-weight:600;">${escapeHtml(r.raw_from)}</td>
+                    <td style="padding:8px; max-width:480px;">${escapeHtml(r.raw_body)}</td>
+                    <td style="padding:8px;">${r.matched_payment_id ? '#' + r.matched_payment_id : '<span style="color:var(--text-secondary)">—</span>'}</td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="4" style="padding:14px; color:var(--red); text-align:center;">Erro: ${e.message}<br><small>(Já correste o SQL de instalação? Vê SMS_FORWARDER_SETUP.md)</small></td></tr>`;
+        }
+    }
+
+    async function loadPendingPayments() {
+        const tbody = document.getElementById('pendingTbody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>';
+        try {
+            const { data, error } = await db.from('pending_payments')
+                .select('*').order('created_at', { ascending: false }).limit(50);
+            if (error) throw error;
+            if (!data || !data.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding:14px; color:var(--text-secondary); text-align:center;">Sem pedidos.</td></tr>';
+                return;
+            }
+            const statusColor = { pending: 'var(--amber)', approved: 'var(--green)', rejected: 'var(--red)', expired: 'var(--text-secondary)' };
+            tbody.innerHTML = data.map(p => `
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:8px; white-space:nowrap;">${new Date(p.created_at).toLocaleString('pt-PT')}</td>
+                    <td style="padding:8px;">${escapeHtml(p.type)}</td>
+                    <td style="padding:8px;">${escapeHtml(p.method)}</td>
+                    <td style="padding:8px; font-weight:600;">${Number(p.amount).toFixed(2)} MT</td>
+                    <td style="padding:8px;"><span style="color:${statusColor[p.status]||'var(--text-secondary)'}; font-weight:600;">${p.status}</span></td>
+                    <td style="padding:8px;">
+                        ${p.status === 'pending' ? `
+                            <button class="btn-primary" style="padding:4px 10px; font-size:12px; background:var(--green);" onclick="manualApprovePending(${p.id})">Aprovar</button>
+                            <button class="btn-primary" style="padding:4px 10px; font-size:12px; background:var(--red); margin-left:4px;" onclick="manualRejectPending(${p.id})">Rejeitar</button>
+                        ` : '<span style="color:var(--text-secondary); font-size:12px;">—</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="6" style="padding:14px; color:var(--red); text-align:center;">Erro: ${e.message}<br><small>(Já correste o SQL de instalação?)</small></td></tr>`;
+        }
+    }
+
+    async function manualApprovePending(id) {
+        if (!confirm('Aprovar manualmente este pedido?')) return;
+        try {
+            await db.from('pending_payments').update({ status: 'approved', reason: 'manual', approved_at: new Date().toISOString() }).eq('id', id);
+            showToast('Pedido aprovado', 'success'); loadPendingPayments();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    }
+
+    async function manualRejectPending(id) {
+        const reason = prompt('Motivo da rejeição (opcional):') || 'manual';
+        try {
+            await db.from('pending_payments').update({ status: 'rejected', reason: reason }).eq('id', id);
+            showToast('Pedido rejeitado', 'success'); loadPendingPayments();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    }
+
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    // Hook into the Settings tab opening so we auto-load the SMS data
+    const _origLoadSettings = loadSettings;
+    loadSettings = async function() {
+        await _origLoadSettings.apply(this, arguments);
+        await loadSmsWebhookConfig();
+        await loadSmsLog();
+        await loadPendingPayments();
+    };
 
 </script>
 </body>
