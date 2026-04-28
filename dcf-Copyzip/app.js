@@ -15,7 +15,105 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, 
     }
 });
 
+/* ============================================
+   MAINTENANCE MODE — Shared helper used by both
+   index.html (app.js) and home.html (home.js).
+   Renders the maintenance screen and wires the
+   10-second logo-hold gesture that opens the
+   admin panel password screen (admin.html).
+   ============================================ */
+window.__mozpayShowMaintenanceScreen = function showMaintenanceScreen() {
+    if (window.__mozpayMaintenanceShown) return;
+    window.__mozpayMaintenanceShown = true;
+
+    document.body.innerHTML = `
+        <div id="maintScreen" style="position:fixed;inset:0;background:#050505;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:'Hanken Grotesk',sans-serif;text-align:center;padding:20px;">
+            <div id="maintLogo" role="button" aria-label="Logo MozPay" style="margin-bottom:24px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;">
+                <svg viewBox="0 0 40 40" width="60" height="60" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none;">
+                    <rect width="40" height="40" rx="10" fill="#E50914"/>
+                    <path d="M12 10 L12 30 L17 30 L17 20 L20 25 L23 20 L23 30 L28 30 L28 10 L23 10 L20 16 L17 10 Z" fill="white"/>
+                </svg>
+            </div>
+            <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:12px;">Em Manutenção</h1>
+            <p style="color:rgba(255,255,255,0.6);font-size:1rem;max-width:320px;line-height:1.6;">A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!</p>
+            <div id="maintProgressWrap" style="margin-top:28px;width:160px;height:3px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;opacity:0;transition:opacity .25s ease;">
+                <div id="maintProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#E50914,#FF4E5B);transition:width .15s linear;"></div>
+            </div>
+            <p style="color:rgba(255,255,255,0.3);margin-top:32px;font-size:0.85rem;">© MozPay 2025</p>
+        </div>`;
+
+    // 10-second hold gesture on the logo to open admin login screen.
+    const logo = document.getElementById('maintLogo');
+    const wrap = document.getElementById('maintProgressWrap');
+    const bar  = document.getElementById('maintProgressBar');
+    if (!logo) return;
+
+    const HOLD_MS = 10000;
+    let holdTimer = null;
+    let progressTimer = null;
+    let startedAt = 0;
+
+    function startHold(e) {
+        if (e && e.cancelable) { try { e.preventDefault(); } catch (_) {} }
+        if (holdTimer) return;
+        startedAt = Date.now();
+        if (wrap) wrap.style.opacity = '1';
+        if (bar)  bar.style.width = '0%';
+
+        progressTimer = setInterval(() => {
+            const pct = Math.min(100, ((Date.now() - startedAt) / HOLD_MS) * 100);
+            if (bar) bar.style.width = pct + '%';
+        }, 80);
+
+        holdTimer = setTimeout(() => {
+            cleanup();
+            // Loads admin.html where the user enters GLOKKSPAZ40123.
+            window.location.href = 'admin.html';
+        }, HOLD_MS);
+    }
+
+    function cleanup() {
+        if (holdTimer)     { clearTimeout(holdTimer);   holdTimer = null; }
+        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    }
+
+    function cancelHold() {
+        cleanup();
+        if (bar)  bar.style.width = '0%';
+        if (wrap) wrap.style.opacity = '0';
+    }
+
+    logo.addEventListener('mousedown',  startHold);
+    logo.addEventListener('touchstart', startHold, { passive: false });
+    logo.addEventListener('mouseup',    cancelHold);
+    logo.addEventListener('mouseleave', cancelHold);
+    logo.addEventListener('touchend',   cancelHold);
+    logo.addEventListener('touchcancel',cancelHold);
+    // Block context menu on long-press (mobile) so the gesture isn't interrupted.
+    logo.addEventListener('contextmenu', (e) => e.preventDefault());
+};
+
+window.__mozpayCheckMaintenance = async function checkMaintenance() {
+    if (window.__mozpayMaintenanceShown) return true;
+    try {
+        const { data: maintenanceSetting } = await supabaseClient
+            .from('system_settings')
+            .select('value')
+            .eq('key', 'maintenance_mode')
+            .single();
+        if (maintenanceSetting && maintenanceSetting.value === 'true') {
+            window.__mozpayShowMaintenanceScreen();
+            return true;
+        }
+    } catch (_) { /* ignore — fail-open so the app stays usable */ }
+    return false;
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
+    // Maintenance check runs on every page (login + home). If active,
+    // it replaces the body with the maintenance screen and we stop here.
+    if (await window.__mozpayCheckMaintenance()) return;
+
     // Only run login/redirect logic on the login page (index.html), not on home.html
     const isHomePage = window.location.pathname.includes('home.html') || window.location.pathname.includes('home');
     if (isHomePage) return; // home.js handles everything on home.html
@@ -27,28 +125,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = 'index.html';
         return;
     }
-
-    // Check maintenance mode
-    try {
-        const { data: maintenanceSetting } = await supabaseClient
-            .from('system_settings')
-            .select('value')
-            .eq('key', 'maintenance_mode')
-            .single();
-        if (maintenanceSetting && maintenanceSetting.value === 'true') {
-            document.body.innerHTML = `
-                <div style="position:fixed;inset:0;background:#050505;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:'Hanken Grotesk',sans-serif;text-align:center;padding:20px;">
-                    <svg viewBox="0 0 40 40" width="60" height="60" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:24px;">
-                        <rect width="40" height="40" rx="10" fill="#E50914"/>
-                        <path d="M12 10 L12 30 L17 30 L17 20 L20 25 L23 20 L23 30 L28 30 L28 10 L23 10 L20 16 L17 10 Z" fill="white"/>
-                    </svg>
-                    <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:12px;">Em Manutenção</h1>
-                    <p style="color:rgba(255,255,255,0.6);font-size:1rem;max-width:320px;line-height:1.6;">A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!</p>
-                    <p style="color:rgba(255,255,255,0.3);margin-top:32px;font-size:0.85rem;">© MozPay 2025</p>
-                </div>`;
-            return;
-        }
-    } catch (e) { /* ignore if can't check */ }
 
     // Always show the login page — no auto-redirect
     // Users go to home.html only after successful login or registration
