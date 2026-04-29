@@ -126,6 +126,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Prefill invite code from URL (?code=ABCDEFG) and auto-open signup
+    const urlInviteCode = (urlParams.get('code') || '').toUpperCase().trim();
+    if (urlInviteCode && /^[A-Z0-9]{7}$/.test(urlInviteCode)) {
+        const tryFill = () => {
+            const inp = document.getElementById('inviteCodeInput');
+            if (inp) {
+                inp.value = urlInviteCode;
+                inp.setAttribute('readonly', 'readonly');
+                inp.style.opacity = '0.85';
+                const lbl = document.querySelector('label[for="inviteCodeInput"]');
+                if (lbl) lbl.classList.add('floating');
+            }
+        };
+        // Defer to ensure form rendered, and attempt to switch to signup mode
+        setTimeout(() => {
+            tryFill();
+            try {
+                const link = document.getElementById('registerLink');
+                if (link) link.click();
+                setTimeout(tryFill, 600);
+                setTimeout(tryFill, 1400);
+            } catch(_){}
+        }, 200);
+    }
+
     // Always show the login page — no auto-redirect
     // Users go to home.html only after successful login or registration
 
@@ -450,6 +475,15 @@ function initLoginScreen() {
                     if (passVal && passVal.length < 8) {
                         showError('regPasswordInput', 'A palavra-passe deve ter pelo menos 8 caracteres.');
                     }
+                    const inviteVal = validateEmpty('inviteCodeInput');
+                    if (inviteVal) {
+                        const cleaned = inviteVal.toUpperCase().trim();
+                        if (cleaned.length !== 7 || !/^[A-Z0-9]+$/.test(cleaned)) {
+                            showError('inviteCodeInput', 'O código de convite tem de ter 7 caracteres (letras e números).');
+                        } else {
+                            document.getElementById('inviteCodeInput').value = cleaned;
+                        }
+                    }
                 }
             } else if (currentMode === 'forgot' || currentMode === 'reset_pwd' || currentMode === 'otp') {
                 return; // not implemented fully yet
@@ -520,15 +554,47 @@ function initLoginScreen() {
                 const passVal = document.getElementById('regPasswordInput').value.trim();
                 const nameVal = document.getElementById('fullNameInput').value.trim();
                 const profVal = document.getElementById('professionInput').value;
+                const inviteCodeVal = (document.getElementById('inviteCodeInput')?.value || '').toUpperCase().trim();
 
                 // Check if signups are disabled
                 supabaseClient.from('system_settings').select('value').eq('key', 'signup_enabled').single()
-                .then(({data: settingData}) => {
+                .then(async ({data: settingData}) => {
                     if (settingData && settingData.value === 'false') {
                         finishCall();
                         const btn = document.getElementById('loginBtn');
                         if (btn) {
                             btn.querySelector('.btn-text').textContent = 'Registos desativados.';
+                            btn.classList.add('input-error');
+                            setTimeout(() => {
+                                btn.querySelector('.btn-text').textContent = 'Continuar';
+                                btn.classList.remove('input-error');
+                            }, 4000);
+                        }
+                        return;
+                    }
+
+                    // ── Validate invite code against real codes ───────────────
+                    let invitedBy = null;
+                    let validCodeSource = null;
+                    try {
+                        const [{ data: prefHit }, { data: codeHit }] = await Promise.all([
+                            supabaseClient.from('user_preferences').select('user_id').eq('invite_code', inviteCodeVal).maybeSingle(),
+                            supabaseClient.from('invite_codes').select('code, is_active, max_uses, uses').eq('code', inviteCodeVal).maybeSingle()
+                        ]);
+                        if (prefHit?.user_id) {
+                            invitedBy = prefHit.user_id;
+                            validCodeSource = 'user';
+                        } else if (codeHit && codeHit.is_active && (codeHit.max_uses == null || (codeHit.uses || 0) < codeHit.max_uses)) {
+                            validCodeSource = 'admin';
+                        }
+                    } catch(e) { console.warn('invite check failed:', e); }
+                    if (!validCodeSource) {
+                        finishCall();
+                        const inp = document.getElementById('inviteCodeInput');
+                        if (inp) { inp.classList.add('input-error'); setTimeout(() => inp.classList.remove('input-error'), 4000); }
+                        const btn = document.getElementById('loginBtn');
+                        if (btn) {
+                            btn.querySelector('.btn-text').textContent = 'Código de convite inválido';
                             btn.classList.add('input-error');
                             setTimeout(() => {
                                 btn.querySelector('.btn-text').textContent = 'Continuar';
@@ -549,10 +615,11 @@ function initLoginScreen() {
                             full_name: nameVal,
                             profession: profVal,
                             contact_email: emailVal,
-                            phone: '+258' + phoneVal
+                            phone: '+258' + phoneVal,
+                            invite_code_used: inviteCodeVal
                         }
                     }
-                }).then(({ data, error }) => {
+                }).then(async ({ data, error }) => {
                     finishCall();
                     if (error) {
                         console.error('Signup error details:', error);
@@ -614,6 +681,34 @@ function initLoginScreen() {
                             }, 4000);
                         }
                     } else {
+                        // ── Generate unique invite_code + create user_preferences row ──
+                        try {
+                            const newUserId = data?.user?.id;
+                            if (newUserId) {
+                                const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                                let myCode = '';
+                                for (let attempt = 0; attempt < 8; attempt++) {
+                                    let c = '';
+                                    for (let i = 0; i < 7; i++) c += A[Math.floor(Math.random() * A.length)];
+                                    const { data: dup } = await supabaseClient.from('user_preferences')
+                                        .select('user_id').eq('invite_code', c).maybeSingle();
+                                    if (!dup) { myCode = c; break; }
+                                }
+                                await supabaseClient.from('user_preferences').upsert({
+                                    user_id: newUserId,
+                                    invite_code: myCode || null,
+                                    invited_by: invitedBy,
+                                    invite_credit_given: false
+                                }, { onConflict: 'user_id' });
+                                if (validCodeSource === 'admin') {
+                                    try { await supabaseClient.rpc('increment_invite_code_uses', { p_code: inviteCodeVal }); }
+                                    catch(_) {
+                                        const { data: cur } = await supabaseClient.from('invite_codes').select('uses').eq('code', inviteCodeVal).maybeSingle();
+                                        await supabaseClient.from('invite_codes').update({ uses: (cur?.uses || 0) + 1 }).eq('code', inviteCodeVal);
+                                    }
+                                }
+                            }
+                        } catch(persistErr) { console.warn('[signup] post-create persist failed:', persistErr); }
                         window.showLoadingScreen();
                     }
                 });

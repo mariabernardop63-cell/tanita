@@ -324,6 +324,16 @@
                 Investimentos
             </a>
 
+            <a class="nav-item" data-pg="deposits">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12l7-7 7 7"/></svg>
+                Depósitos
+                <span class="badge" id="depositsBadge">0</span>
+            </a>
+            <a class="nav-item" data-pg="approve-investments">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Aprovação de Investimentos
+                <span class="badge" id="approveInvBadge">0</span>
+            </a>
             <a class="nav-item" data-pg="refunds">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.5"></path></svg>
                 Reembolsos
@@ -690,12 +700,16 @@
             </div>
         </div>
 
-        <!-- MESSAGES -->
-        <div class="page-view" id="page-messages">
+        <!-- DEPOSITS APPROVAL -->
+        <div class="page-view" id="page-deposits">
             <div class="page-header">
                 <div>
-                    <h1 class="page-title">Mensagens Recebidas</h1>
-                    <p class="page-subtitle">Caixa de entrada de suporte.</p>
+                    <h1 class="page-title">Depósitos</h1>
+                    <p class="page-subtitle">Aprovação manual de depósitos pendentes.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="live-indicator"><div class="live-dot"></div> Ao Vivo</div>
+                    <div class="section-badge" style="background:rgba(245,158,11,0.1);color:var(--amber);border:1px solid rgba(245,158,11,0.2);" id="depPendingBadge">0 Pendentes</div>
                 </div>
             </div>
             <div class="section animate-enter stagger-1">
@@ -703,15 +717,106 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Remetente</th>
-                                <th>Mensagem</th>
+                                <th>Utilizador</th>
+                                <th>Método</th>
+                                <th>Valor</th>
+                                <th>Referência</th>
                                 <th>Data</th>
+                                <th>Estado</th>
+                                <th>Acções</th>
                             </tr>
                         </thead>
-                        <tbody id="msgsTbl"></tbody>
+                        <tbody id="depositsTbl">
+                            <tr><td colspan="7" class="empty-state">A carregar…</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
+        </div>
+
+        <!-- INVESTMENT APPROVAL -->
+        <div class="page-view" id="page-approve-investments">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Aprovação de Investimentos</h1>
+                    <p class="page-subtitle">Activar planos de utilizadores após confirmação do pagamento.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="live-indicator"><div class="live-dot"></div> Ao Vivo</div>
+                    <div class="section-badge" style="background:rgba(245,158,11,0.1);color:var(--amber);border:1px solid rgba(245,158,11,0.2);" id="invPendingBadge">0 Pendentes</div>
+                </div>
+            </div>
+            <div class="section animate-enter stagger-1">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Utilizador</th>
+                                <th>Método</th>
+                                <th>Nível</th>
+                                <th>Valor</th>
+                                <th>Referência</th>
+                                <th>Data</th>
+                                <th>Estado</th>
+                                <th>Acções</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approveInvTbl">
+                            <tr><td colspan="8" class="empty-state">A carregar…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MESSAGES (CHAT 2-WAY) -->
+        <div class="page-view" id="page-messages">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Mensagens dos Utilizadores</h1>
+                    <p class="page-subtitle">Conversa em tempo real com os utilizadores.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="live-indicator"><div class="live-dot"></div> Ao Vivo</div>
+                    <div class="section-badge" id="msgsBadge">0 conversas</div>
+                </div>
+            </div>
+            <div class="section animate-enter stagger-1" style="padding:0;">
+                <div class="chat-layout" style="display:grid; grid-template-columns: 320px 1fr; min-height:560px;">
+                    <div id="chatConvList" style="border-right:1px solid var(--border); overflow-y:auto; max-height:600px;">
+                        <div class="empty-state" style="padding:24px 16px;">A carregar…</div>
+                    </div>
+                    <div id="chatPanel" style="display:flex; flex-direction:column; min-height:560px;">
+                        <div id="chatPanelHeader" style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px;">
+                            <div style="color:var(--text-secondary); font-size:14px;">Selecciona uma conversa à esquerda</div>
+                        </div>
+                        <div id="chatPanelBody" style="flex:1; padding:18px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; background:var(--surface-light); max-height:480px;">
+                            <div class="empty-state" style="margin:auto;">Sem conversa seleccionada</div>
+                        </div>
+                        <div id="chatPanelFooter" style="padding:12px; border-top:1px solid var(--border); display:flex; gap:8px;">
+                            <input type="text" class="form-input" id="chatReplyInput" placeholder="Escreve a tua resposta..." disabled>
+                            <button class="btn-primary" id="chatReplySendBtn" onclick="sendAdminReply()" disabled>Enviar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <style>
+                @media (max-width: 880px) {
+                    #page-messages .chat-layout { grid-template-columns: 1fr !important; }
+                    #chatConvList { max-height: 240px !important; border-right: none !important; border-bottom: 1px solid var(--border); }
+                }
+                .conv-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+                .conv-item:hover { background: var(--surface-light); }
+                .conv-item.active { background: rgba(229,9,20,0.08); border-left: 3px solid var(--primary); }
+                .conv-item .conv-name { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+                .conv-item .conv-preview { font-size: 12px; color: var(--text-secondary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .conv-item .conv-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+                .conv-item .unread-dot { display: inline-block; width: 8px; height: 8px; background: var(--primary); border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+                .chat-bubble-admin { max-width: 75%; padding: 10px 14px; border-radius: 16px 16px 4px 16px; background: var(--primary); color: white; align-self: flex-end; word-wrap: break-word; }
+                .chat-bubble-user  { max-width: 75%; padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: var(--surface); color: var(--text-primary); align-self: flex-start; border: 1px solid var(--border); word-wrap: break-word; }
+                .chat-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+                .chat-meta.right { text-align: right; }
+            </style>
         </div>
 
         <!-- SETTINGS -->
@@ -821,82 +926,53 @@
             </div>
 
             <!-- ════════════════════════════════════════════════════════════
-                 SMS FORWARDER — Verificação automática de transferências
+                 SISTEMA DE CONVITES — Domínio público + códigos
                  ════════════════════════════════════════════════════════════ -->
-            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-3">Verificação Automática SMS</h3>
+            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-3">Sistema de Convites</h3>
             <div class="section animate-enter stagger-3">
                 <p style="color:var(--text-secondary); margin-bottom:16px; font-size:14px;">
-                    Configura o webhook que recebe SMS da app <strong>SMS Forwarder</strong> instalada no telemóvel com o SIM de recebimento. Quando uma transferência chega, o SMS é encaminhado para o servidor MozPay, que regista a mensagem no Supabase. A tela "Aguardando confirmação" do utilizador detecta o SMS em tempo real e credita o saldo / activa o nível automaticamente. Vê o ficheiro <code>SMS_FORWARDER_SETUP.md</code> para o passo-a-passo completo.
+                    O domínio é usado para construir o link de convite no formato <code>dominio/CODIGO</code>. Cada utilizador recebe um código único de 7 caracteres no momento do registo. Aqui podes também gerar códigos extra (para campanhas, promoções, etc.) que ficam disponíveis para qualquer pessoa usar até serem reclamados.
                 </p>
 
                 <div class="form-grid">
-                    <div class="form-group" style="grid-column: 1 / -1; background: rgba(124,58,237,0.04); padding: 16px; border-radius: var(--radius-md); border: 1px solid rgba(124,58,237,0.25);">
-                        <label class="form-label">URL do Webhook (copia para a app SMS Forwarder)</label>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <input type="text" class="form-input mono-num" id="smsWebhookUrl" readonly style="font-size:13px;">
-                            <button class="btn-primary" style="padding:10px 14px; white-space:nowrap;" onclick="copyToClipboard('smsWebhookUrl')">Copiar</button>
-                        </div>
-                    </div>
-
                     <div class="form-group" style="grid-column: 1 / -1; background: rgba(229,9,20,0.04); padding: 16px; border-radius: var(--radius-md); border: 1px solid rgba(229,9,20,0.25);">
-                        <label class="form-label">Chave-secreta (cabeçalho <code>X-Webhook-Secret</code>)</label>
+                        <label class="form-label">Domínio público da plataforma</label>
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <input type="text" class="form-input mono-num" id="smsWebhookSecret" readonly placeholder="Ainda não gerada — clique em 'Gerar' para criar" style="font-size:13px;">
-                            <button class="btn-primary" style="padding:10px 14px; white-space:nowrap;" onclick="copyToClipboard('smsWebhookSecret')">Copiar</button>
-                            <button class="btn-primary" style="padding:10px 14px; white-space:nowrap; background:var(--amber);" onclick="regenSmsWebhookSecret()">Gerar / Regenerar</button>
+                            <input type="text" class="form-input mono-num" id="siteDomainInput" placeholder="ex: mozpay.co.mz" style="font-size:14px;">
+                            <button class="btn-primary" style="padding:10px 14px; white-space:nowrap;" onclick="saveSiteDomain()">Guardar</button>
                         </div>
-                        <p style="color:var(--text-secondary); margin-top:8px; font-size:12px;">⚠️ Ao regenerar, tens de actualizar a chave também na app SMS Forwarder, senão os SMS vão deixar de ser aceites.</p>
+                        <p style="color:var(--text-secondary); margin-top:8px; font-size:12px;">Os links de convite ficam: <code id="domainPreview">https://mozpay.co.mz/?code=ABC1234</code></p>
                     </div>
 
-                    <div class="form-group" style="grid-column: 1 / -1; margin-top: 4px;">
-                        <button class="btn-primary" style="background:var(--blue); padding:10px 18px;" onclick="testSmsWebhook()">Testar conexão (envia um SMS fictício)</button>
-                        <span id="smsTestResult" style="margin-left:12px; font-size:13px; color:var(--text-secondary);"></span>
+                    <div class="form-group" style="grid-column: 1 / -1; background: rgba(16,185,129,0.04); padding: 16px; border-radius: var(--radius-md); border: 1px solid rgba(16,185,129,0.25);">
+                        <label class="form-label">Gerar código de convite extra (admin)</label>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <button class="btn-primary" style="padding:10px 18px; background:var(--green);" onclick="generateAdminInviteCode()">+ Gerar Novo Código</button>
+                            <span id="genCodeResult" style="font-size:13px; color:var(--text-secondary);"></span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Últimas mensagens recebidas -->
-            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-4">Últimas mensagens recebidas (sms_log)</h3>
+            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-4">Códigos de convite gerados pelo admin</h3>
             <div class="section animate-enter stagger-4">
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <div class="table-container">
+                    <table>
                         <thead>
-                            <tr style="text-align:left; color:var(--text-secondary); border-bottom:1px solid var(--border);">
-                                <th style="padding:8px;">Quando</th>
-                                <th style="padding:8px;">Remetente</th>
-                                <th style="padding:8px;">Mensagem</th>
-                                <th style="padding:8px;">Pedido</th>
+                            <tr>
+                                <th>Código</th>
+                                <th>Link Completo</th>
+                                <th>Usos</th>
+                                <th>Criado em</th>
+                                <th>Estado</th>
                             </tr>
                         </thead>
-                        <tbody id="smsLogTbody">
-                            <tr><td colspan="4" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>
+                        <tbody id="inviteCodesTbl">
+                            <tr><td colspan="5" class="empty-state">A carregar…</td></tr>
                         </tbody>
                     </table>
                 </div>
-                <button class="btn-primary" style="background:var(--text-secondary); padding:8px 14px; margin-top:12px; font-size:13px;" onclick="loadSmsLog()">Actualizar</button>
-            </div>
-
-            <!-- Pedidos pendentes -->
-            <h3 style="margin: 32px 0 16px; color: var(--text-secondary);" class="animate-enter stagger-5">Pedidos pendentes (pending_payments)</h3>
-            <div class="section animate-enter stagger-5">
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                        <thead>
-                            <tr style="text-align:left; color:var(--text-secondary); border-bottom:1px solid var(--border);">
-                                <th style="padding:8px;">Quando</th>
-                                <th style="padding:8px;">Tipo</th>
-                                <th style="padding:8px;">Método</th>
-                                <th style="padding:8px;">Valor</th>
-                                <th style="padding:8px;">Estado</th>
-                                <th style="padding:8px;">Acções</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pendingTbody">
-                            <tr><td colspan="6" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <button class="btn-primary" style="background:var(--text-secondary); padding:8px 14px; margin-top:12px; font-size:13px;" onclick="loadPendingPayments()">Actualizar</button>
+                <button class="btn-primary" style="background:var(--text-secondary); padding:8px 14px; margin-top:12px; font-size:13px;" onclick="loadInviteCodes()">Actualizar</button>
             </div>
         </div>
 
@@ -987,6 +1063,9 @@
             else if(pg === 'online-users') loadOnlineUsers();
             else if(pg === 'refunds') loadRefunds();
             else if(pg === 'notifications') loadNotifications();
+            else if(pg === 'deposits') loadPendingDeposits();
+            else if(pg === 'approve-investments') loadPendingInvestments();
+            else if(pg === 'settings') { loadSettings(); loadInviteCodes(); }
         });
     });
 
@@ -1020,50 +1099,59 @@
     let invChannel = null;
     let txChannel = null;
     let usersChannel = null;
+    let pendChannel = null;
+    let refundChannel = null;
+    let notifChannel = null;
+    let chatChannel = null;
 
     // Inicializar todos os canais realtime uma vez
     function initRealtime() {
-        // Realtime - sem filtros para garantir que funciona
         if(!wdChannel) {
             wdChannel = db.channel('wd-admin-realtime')
-                .on('postgres_changes', {event: '*', schema: 'public', table: 'withdrawal_requests'}, payload => {
-                    console.log('Mudança em levantamentos:', payload);
-                    showToast('Levantamento atualizado!', 'success');
-                    loadWds();
-                    loadDashboard();
+                .on('postgres_changes', {event: '*', schema: 'public', table: 'withdrawal_requests'}, () => {
+                    loadWds(); loadDashboard();
                 }).subscribe();
         }
-
-        // Realtime para investimentos
         if(!invChannel) {
             invChannel = db.channel('inv-admin-realtime')
-                .on('postgres_changes', {event: '*', schema: 'public', table: 'user_preferences'}, payload => {
-                    console.log('Mudança em investimentos:', payload);
-                    showToast('Investimento atualizado!', 'success');
-                    loadInv();
-                    loadDashboard();
+                .on('postgres_changes', {event: '*', schema: 'public', table: 'user_preferences'}, () => {
+                    loadInv(); loadDashboard();
                 }).subscribe();
         }
-
-        // Realtime para transações
         if(!txChannel) {
             txChannel = db.channel('tx-admin-realtime')
-                .on('postgres_changes', {event: '*', schema: 'public', table: 'transactions'}, payload => {
-                    console.log('Nova transação:', payload);
-                    showToast('Nova transação!', 'success');
-                    loadDashboard();
-                    loadTxs();
+                .on('postgres_changes', {event: '*', schema: 'public', table: 'transactions'}, () => {
+                    loadDashboard(); loadTxs();
                 }).subscribe();
         }
-
-        // Realtime para utilizadores (wallets)
         if(!usersChannel) {
             usersChannel = db.channel('users-admin-realtime')
-                .on('postgres_changes', {event: '*', schema: 'public', table: 'wallets'}, payload => {
-                    console.log('Mudança em utilizadores:', payload);
-                    showToast('Utilizador atualizado!', 'success');
-                    loadDashboard();
-                    loadUsers();
+                .on('postgres_changes', {event: '*', schema: 'public', table: 'wallets'}, () => {
+                    loadDashboard(); loadUsers();
+                }).subscribe();
+        }
+        if(!pendChannel) {
+            pendChannel = db.channel('pend-admin-realtime')
+                .on('postgres_changes', {event: '*', schema: 'public', table: 'pending_payments'}, () => {
+                    loadPendingDeposits(); loadPendingInvestments();
+                }).subscribe();
+        }
+        if(!refundChannel) {
+            refundChannel = db.channel('refund-admin-realtime')
+                .on('postgres_changes', {event: '*', schema: 'public', table: 'refund_requests'}, () => {
+                    loadRefunds();
+                }).subscribe();
+        }
+        if(!notifChannel) {
+            notifChannel = db.channel('notif-admin-realtime')
+                .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'notifications'}, () => {
+                    loadNotifications();
+                }).subscribe();
+        }
+        if(!chatChannel) {
+            chatChannel = db.channel('chat-admin-realtime')
+                .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'chat_messages'}, () => {
+                    loadMsgs();
                 }).subscribe();
         }
     }
@@ -1071,6 +1159,8 @@
     function initApp() {
         loadDashboard();
         loadSettings();
+        loadPendingDeposits();
+        loadPendingInvestments();
         initRealtime();
     }
 
@@ -1468,29 +1558,120 @@
         }
     }
 
+    // ─── CHAT (2-way admin/user) ─────────────────────────────────────
+    let _activeConvId = null;
+    let _convCache = {};
     async function loadMsgs() {
-        const { data } = await db.from('admin_messages').select('*').order('created_at', { ascending: false }).limit(50);
-        const tbody = document.getElementById('msgsTbl');
-        if(data && data.length > 0) {
-            tbody.innerHTML = data.map(r => `
-                <tr>
-                    <td>
-                        <div class="user-cell">
-                            <div class="avatar">${ini(r.sender_name || 'A')}</div>
-                            <div>
-                                <div class="u-name">${r.sender_name || 'Desconhecido'}</div>
-                                <div class="u-phone">${r.sender_phone || '-'}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td style="max-width:300px; white-space:normal; line-height:1.5; color:var(--text-secondary);">${r.message}</td>
-                    <td class="date">${fd(r.created_at)}</td>
-                </tr>
+        const list = document.getElementById('chatConvList');
+        if (!list) return;
+        try {
+            const { data, error } = await db.from('chat_messages').select('*').order('created_at', { ascending: false }).limit(500);
+            if (error) throw error;
+            const conv = {};
+            (data || []).forEach(m => {
+                const cid = m.conversation_id || m.user_id;
+                if (!conv[cid]) conv[cid] = { id: cid, user_name: m.user_name, user_phone: m.user_phone, last: m, unread: 0, msgs: [] };
+                conv[cid].msgs.push(m);
+                if (m.user_name && !conv[cid].user_name) conv[cid].user_name = m.user_name;
+                if (m.user_phone && !conv[cid].user_phone) conv[cid].user_phone = m.user_phone;
+                if (m.sender === 'user' && !m.is_read) conv[cid].unread++;
+                if (new Date(m.created_at) > new Date(conv[cid].last.created_at)) conv[cid].last = m;
+            });
+            const arr = Object.values(conv).sort((a,b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+            _convCache = conv;
+            const badge = document.getElementById('msgsBadge');
+            if (badge) badge.textContent = arr.length + ' conversas';
+            if (!arr.length) {
+                list.innerHTML = '<div class="empty-state" style="padding:24px 16px;">Sem conversas ainda</div>';
+                return;
+            }
+            list.innerHTML = arr.map(c => `
+                <div class="conv-item ${c.id === _activeConvId ? 'active' : ''}" onclick="openConv('${c.id}')">
+                    <div class="conv-name">${c.unread > 0 ? '<span class="unread-dot"></span>' : ''}${escapeHtml(c.user_name || 'Utilizador')}</div>
+                    <div class="conv-preview">${escapeHtml((c.last.body || '').slice(0, 60))}</div>
+                    <div class="conv-time">${fd(c.last.created_at)} · ${c.user_phone || ''}</div>
+                </div>
             `).join('');
-        } else {
-            tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Sem mensagens de suporte</td></tr>';
+            if (_activeConvId && _convCache[_activeConvId]) renderConvPanel(_activeConvId);
+        } catch (e) {
+            list.innerHTML = `<div class="empty-state" style="padding:24px 16px; color:var(--red);">Erro: ${e.message}</div>`;
         }
     }
+
+    window.openConv = async function(cid) {
+        _activeConvId = cid;
+        document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+        event?.currentTarget?.classList.add('active');
+        renderConvPanel(cid);
+        // Mark user messages as read
+        try {
+            await db.from('chat_messages').update({ is_read: true }).eq('conversation_id', cid).eq('sender', 'user').eq('is_read', false);
+        } catch(_) {}
+    };
+
+    function renderConvPanel(cid) {
+        const c = _convCache[cid];
+        if (!c) return;
+        const header = document.getElementById('chatPanelHeader');
+        const body   = document.getElementById('chatPanelBody');
+        const input  = document.getElementById('chatReplyInput');
+        const btn    = document.getElementById('chatReplySendBtn');
+        const sorted = [...c.msgs].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+        header.innerHTML = `
+            <div class="avatar">${ini(c.user_name || 'U')}</div>
+            <div>
+                <div class="u-name">${escapeHtml(c.user_name || 'Utilizador')}</div>
+                <div class="u-phone">${escapeHtml(c.user_phone || '')}</div>
+            </div>`;
+        body.innerHTML = sorted.map(m => {
+            const cls = m.sender === 'admin' ? 'chat-bubble-admin' : 'chat-bubble-user';
+            const meta = m.sender === 'admin' ? 'right' : '';
+            return `
+                <div class="${cls}">${escapeHtml(m.body)}</div>
+                <div class="chat-meta ${meta}">${fd(m.created_at)}</div>`;
+        }).join('');
+        body.scrollTop = body.scrollHeight;
+        input.disabled = false;
+        btn.disabled = false;
+        input.focus();
+    }
+
+    window.sendAdminReply = async function() {
+        if (!_activeConvId) return;
+        const input = document.getElementById('chatReplyInput');
+        const text = (input.value || '').trim();
+        if (!text) return;
+        const btn = document.getElementById('chatReplySendBtn');
+        btn.disabled = true;
+        try {
+            await db.from('chat_messages').insert({
+                conversation_id: _activeConvId,
+                user_id: _activeConvId,
+                sender: 'admin',
+                body: text,
+                user_name: _convCache[_activeConvId]?.user_name || null,
+                user_phone: _convCache[_activeConvId]?.user_phone || null,
+                is_read: false
+            });
+            // Notify the user
+            await db.from('notifications').insert({
+                user_id: _activeConvId,
+                title: 'Nova resposta do suporte',
+                message: text.slice(0, 200),
+                type: 'system',
+                is_read: false
+            });
+            input.value = '';
+            await loadMsgs();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+        finally { btn.disabled = false; }
+    };
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && document.activeElement?.id === 'chatReplyInput') {
+            e.preventDefault();
+            sendAdminReply();
+        }
+    });
 
     async function loadNotifications() {
         // Notifications page already has its own send form. Load recent sent ones.
@@ -1638,139 +1819,15 @@
     }
 
     /* ────────────────────────────────────────────────────────────
-       SMS Forwarder admin functions
+       APROVAÇÃO MANUAL — Depósitos & Investimentos
        ──────────────────────────────────────────────────────────── */
     function copyToClipboard(elId) {
         const el = document.getElementById(elId);
         if (!el || !el.value) { showToast('Nada para copiar', 'error'); return; }
         navigator.clipboard.writeText(el.value).then(
-            () => showToast('Copiado para a área de transferência', 'success'),
+            () => showToast('Copiado', 'success'),
             () => showToast('Não foi possível copiar', 'error')
         );
-    }
-
-    async function loadSmsWebhookConfig() {
-        const urlEl    = document.getElementById('smsWebhookUrl');
-        const secretEl = document.getElementById('smsWebhookSecret');
-        if (urlEl) urlEl.value = `${location.origin}/api/sms-webhook`;
-        try {
-            const { data } = await db.from('system_settings')
-                .select('value').eq('key', 'sms_webhook_secret').maybeSingle();
-            if (secretEl) secretEl.value = data?.value || '';
-        } catch (e) { console.warn('Could not load webhook secret:', e); }
-    }
-
-    async function regenSmsWebhookSecret() {
-        if (!confirm('Tens a certeza? Vais ter de actualizar a chave também na app SMS Forwarder, senão os SMS deixam de ser aceites.')) return;
-        const bytes = new Uint8Array(24);
-        crypto.getRandomValues(bytes);
-        const secret = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-        try {
-            await db.from('system_settings').upsert({ key: 'sms_webhook_secret', value: secret }, { onConflict: 'key' });
-            document.getElementById('smsWebhookSecret').value = secret;
-            showToast('Chave gerada com sucesso', 'success');
-        } catch (e) { showToast('Erro ao gerar chave', 'error'); }
-    }
-
-    async function testSmsWebhook() {
-        const resultEl = document.getElementById('smsTestResult');
-        const secret = document.getElementById('smsWebhookSecret').value.trim();
-        if (!secret) { resultEl.textContent = '⚠ Gere primeiro a chave-secreta.'; return; }
-        resultEl.textContent = 'A enviar SMS de teste…';
-        try {
-            const r = await fetch('/api/sms-webhook', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': secret },
-                body: JSON.stringify({
-                    from: 'M-Pesa',
-                    text: 'TESTE MozPay: confirmacao de teste, valor 1.00 MT. ID: TEST' + Date.now(),
-                    sentStamp: Date.now()
-                })
-            });
-            const j = await r.json();
-            if (r.ok && j.ok) {
-                resultEl.innerHTML = '<span style="color:var(--green)">✓ Funcionou! O SMS de teste deve aparecer na tabela abaixo.</span>';
-                setTimeout(loadSmsLog, 800);
-            } else {
-                resultEl.innerHTML = `<span style="color:var(--red)">✗ Falhou (${r.status}): ${j.error || 'erro desconhecido'}</span>`;
-            }
-        } catch (e) {
-            resultEl.innerHTML = `<span style="color:var(--red)">✗ Erro de rede: ${e.message}</span>`;
-        }
-    }
-
-    async function loadSmsLog() {
-        const tbody = document.getElementById('smsLogTbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>';
-        try {
-            const { data, error } = await db.from('sms_log')
-                .select('*').order('received_at', { ascending: false }).limit(30);
-            if (error) throw error;
-            if (!data || !data.length) {
-                tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; color:var(--text-secondary); text-align:center;">Ainda nenhum SMS recebido.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.map(r => `
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:8px; white-space:nowrap;">${new Date(r.received_at).toLocaleString('pt-PT')}</td>
-                    <td style="padding:8px; font-weight:600;">${escapeHtml(r.raw_from)}</td>
-                    <td style="padding:8px; max-width:480px;">${escapeHtml(r.raw_body)}</td>
-                    <td style="padding:8px;">${r.matched_payment_id ? '#' + r.matched_payment_id : '<span style="color:var(--text-secondary)">—</span>'}</td>
-                </tr>
-            `).join('');
-        } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="4" style="padding:14px; color:var(--red); text-align:center;">Erro: ${e.message}<br><small>(Já correste o SQL de instalação? Vê SMS_FORWARDER_SETUP.md)</small></td></tr>`;
-        }
-    }
-
-    async function loadPendingPayments() {
-        const tbody = document.getElementById('pendingTbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="6" style="padding:14px; color:var(--text-secondary); text-align:center;">A carregar…</td></tr>';
-        try {
-            const { data, error } = await db.from('pending_payments')
-                .select('*').order('created_at', { ascending: false }).limit(50);
-            if (error) throw error;
-            if (!data || !data.length) {
-                tbody.innerHTML = '<tr><td colspan="6" style="padding:14px; color:var(--text-secondary); text-align:center;">Sem pedidos.</td></tr>';
-                return;
-            }
-            const statusColor = { pending: 'var(--amber)', approved: 'var(--green)', rejected: 'var(--red)', expired: 'var(--text-secondary)' };
-            tbody.innerHTML = data.map(p => `
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:8px; white-space:nowrap;">${new Date(p.created_at).toLocaleString('pt-PT')}</td>
-                    <td style="padding:8px;">${escapeHtml(p.type)}</td>
-                    <td style="padding:8px;">${escapeHtml(p.method)}</td>
-                    <td style="padding:8px; font-weight:600;">${Number(p.amount).toFixed(2)} MT</td>
-                    <td style="padding:8px;"><span style="color:${statusColor[p.status]||'var(--text-secondary)'}; font-weight:600;">${p.status}</span></td>
-                    <td style="padding:8px;">
-                        ${p.status === 'pending' ? `
-                            <button class="btn-primary" style="padding:4px 10px; font-size:12px; background:var(--green);" onclick="manualApprovePending(${p.id})">Aprovar</button>
-                            <button class="btn-primary" style="padding:4px 10px; font-size:12px; background:var(--red); margin-left:4px;" onclick="manualRejectPending(${p.id})">Rejeitar</button>
-                        ` : '<span style="color:var(--text-secondary); font-size:12px;">—</span>'}
-                    </td>
-                </tr>
-            `).join('');
-        } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="6" style="padding:14px; color:var(--red); text-align:center;">Erro: ${e.message}<br><small>(Já correste o SQL de instalação?)</small></td></tr>`;
-        }
-    }
-
-    async function manualApprovePending(id) {
-        if (!confirm('Aprovar manualmente este pedido?')) return;
-        try {
-            await db.from('pending_payments').update({ status: 'approved', reason: 'manual', approved_at: new Date().toISOString() }).eq('id', id);
-            showToast('Pedido aprovado', 'success'); loadPendingPayments();
-        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
-    }
-
-    async function manualRejectPending(id) {
-        const reason = prompt('Motivo da rejeição (opcional):') || 'manual';
-        try {
-            await db.from('pending_payments').update({ status: 'rejected', reason: reason }).eq('id', id);
-            showToast('Pedido rejeitado', 'success'); loadPendingPayments();
-        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
     }
 
     function escapeHtml(s) {
@@ -1779,13 +1836,290 @@
         }[c]));
     }
 
-    // Hook into the Settings tab opening so we auto-load the SMS data
+    async function loadPendingDeposits() {
+        const tbody = document.getElementById('depositsTbl');
+        const badgeNav = document.getElementById('depositsBadge');
+        const badgeHd  = document.getElementById('depPendingBadge');
+        if (!tbody) return;
+        try {
+            const { data, error } = await db.from('pending_payments')
+                .select('*').eq('type', 'deposit').order('created_at', { ascending: false }).limit(100);
+            if (error) throw error;
+            const pendingCount = (data || []).filter(p => p.status === 'pending').length;
+            if (badgeNav) badgeNav.textContent = pendingCount;
+            if (badgeHd)  badgeHd.textContent = pendingCount + ' Pendentes';
+            if (!data || !data.length) {
+                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state">Sem depósitos pendentes</div></td></tr>';
+                return;
+            }
+            const stColor = { pending: 'var(--amber)', approved: 'var(--green)', rejected: 'var(--red)' };
+            const stLabel = { pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado' };
+            tbody.innerHTML = data.map(p => `
+                <tr>
+                    <td>
+                        <div class="user-cell">
+                            <div class="avatar">${ini(p.user_name || 'U')}</div>
+                            <div>
+                                <div class="u-name">${escapeHtml(p.user_name || 'Utilizador')}</div>
+                                <div class="u-phone">${escapeHtml(p.user_id || '')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(p.method || '—')}</td>
+                    <td class="amt">${Number(p.amount).toFixed(2)} MT</td>
+                    <td class="mono-num">${escapeHtml(p.tx_reference || '—')}</td>
+                    <td class="date">${fd(p.created_at)}</td>
+                    <td><span style="color:${stColor[p.status]||'var(--text-secondary)'}; font-weight:600;">${stLabel[p.status]||p.status}</span></td>
+                    <td>
+                        ${p.status === 'pending' ? `
+                            <button class="action-btn" style="background:var(--green);" onclick="approveDeposit(${p.id})">Aprovar</button>
+                            <button class="action-btn" style="background:var(--red); margin-left:6px;" onclick="rejectDeposit(${p.id})">Rejeitar</button>
+                        ` : '—'}
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red); padding:14px;">Erro: ${e.message}</td></tr>`;
+        }
+    }
+
+    async function loadPendingInvestments() {
+        const tbody = document.getElementById('approveInvTbl');
+        const badgeNav = document.getElementById('approveInvBadge');
+        const badgeHd  = document.getElementById('invPendingBadge');
+        if (!tbody) return;
+        try {
+            const { data, error } = await db.from('pending_payments')
+                .select('*').eq('type', 'investment').order('created_at', { ascending: false }).limit(100);
+            if (error) throw error;
+            const pendingCount = (data || []).filter(p => p.status === 'pending').length;
+            if (badgeNav) badgeNav.textContent = pendingCount;
+            if (badgeHd)  badgeHd.textContent = pendingCount + ' Pendentes';
+            if (!data || !data.length) {
+                tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state">Sem investimentos pendentes</div></td></tr>';
+                return;
+            }
+            const stColor = { pending: 'var(--amber)', approved: 'var(--green)', rejected: 'var(--red)' };
+            const stLabel = { pending: 'Pendente', approved: 'Aprovado', rejected: 'Rejeitado' };
+            tbody.innerHTML = data.map(p => {
+                const level = p.level_name ? `${p.level_rank ? 'Nv ' + p.level_rank + ' — ' : ''}${p.level_name}` : (p.level_rank ? 'Nível ' + p.level_rank : '—');
+                return `
+                <tr>
+                    <td>
+                        <div class="user-cell">
+                            <div class="avatar">${ini(p.user_name || 'U')}</div>
+                            <div>
+                                <div class="u-name">${escapeHtml(p.user_name || 'Utilizador')}</div>
+                                <div class="u-phone">${escapeHtml(p.user_id || '')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(p.method || '—')}</td>
+                    <td><strong>${escapeHtml(level)}</strong></td>
+                    <td class="amt">${Number(p.amount).toFixed(2)} MT</td>
+                    <td class="mono-num">${escapeHtml(p.tx_reference || '—')}</td>
+                    <td class="date">${fd(p.created_at)}</td>
+                    <td><span style="color:${stColor[p.status]||'var(--text-secondary)'}; font-weight:600;">${stLabel[p.status]||p.status}</span></td>
+                    <td>
+                        ${p.status === 'pending' ? `
+                            <button class="action-btn" style="background:var(--green);" onclick="approveInvestment(${p.id})">Aprovar</button>
+                            <button class="action-btn" style="background:var(--red); margin-left:6px;" onclick="rejectInvestment(${p.id})">Rejeitar</button>
+                        ` : '—'}
+                    </td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="8" style="color:var(--red); padding:14px;">Erro: ${e.message}</td></tr>`;
+        }
+    }
+
+    async function approveDeposit(id) {
+        if (!confirm('Aprovar este depósito? O saldo do utilizador será creditado.')) return;
+        try {
+            const { data: p, error } = await db.from('pending_payments').select('*').eq('id', id).single();
+            if (error) throw error;
+            if (p.status !== 'pending') { showToast('Já processado', 'error'); return; }
+
+            // Credit wallet
+            const { data: wallet } = await db.from('wallets').select('balance').eq('user_id', p.user_id).maybeSingle();
+            const newBal = Number(wallet?.balance || 0) + Number(p.amount);
+            if (wallet) {
+                await db.from('wallets').update({ balance: newBal }).eq('user_id', p.user_id);
+            } else {
+                await db.from('wallets').insert({ user_id: p.user_id, balance: newBal });
+            }
+            // Log transaction
+            await db.from('transactions').insert({
+                user_id: p.user_id, type: 'in',
+                description: 'Depósito aprovado',
+                sub_description: (p.method || '').toUpperCase() + ' · ' + (p.tx_reference || ''),
+                amount: Number(p.amount), wallet_provider: p.method,
+                user_name: p.user_name, status: 'approved', method: p.method,
+                pending_payment_id: p.id
+            });
+            // Update pending
+            await db.from('pending_payments').update({ status: 'approved', processed_by: 'admin', approved_at: new Date().toISOString() }).eq('id', id);
+            // Notify
+            await db.from('notifications').insert({
+                user_id: p.user_id, title: 'Depósito aprovado',
+                message: `O seu depósito de ${Number(p.amount).toFixed(2)} MT foi creditado com sucesso.`,
+                type: 'success', is_read: false
+            });
+            showToast('Depósito aprovado', 'success');
+            loadPendingDeposits();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    }
+
+    async function rejectDeposit(id) {
+        const reason = prompt('Motivo da rejeição (opcional):') || 'Rejeitado pela equipa';
+        try {
+            const { data: p } = await db.from('pending_payments').select('*').eq('id', id).single();
+            if (!p) return;
+            await db.from('pending_payments').update({ status: 'rejected', reason: reason, processed_by: 'admin' }).eq('id', id);
+            await db.from('notifications').insert({
+                user_id: p.user_id, title: 'Depósito rejeitado',
+                message: `O seu depósito de ${Number(p.amount).toFixed(2)} MT foi rejeitado. Motivo: ${reason}`,
+                type: 'error', is_read: false
+            });
+            showToast('Rejeitado', 'success');
+            loadPendingDeposits();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    }
+
+    async function approveInvestment(id) {
+        if (!confirm('Aprovar este investimento? O nível será activado.')) return;
+        try {
+            const { data: p, error } = await db.from('pending_payments').select('*').eq('id', id).single();
+            if (error) throw error;
+            if (p.status !== 'pending') { showToast('Já processado', 'error'); return; }
+            const levelName = p.level_name || null;
+            const levelRank = p.level_rank || null;
+
+            // Activate investment in user_preferences
+            const { data: pref } = await db.from('user_preferences').select('*').eq('user_id', p.user_id).maybeSingle();
+            const upd = {
+                active_level: levelRank,
+                active_level_name: levelName
+            };
+            if (pref) {
+                await db.from('user_preferences').update(upd).eq('user_id', p.user_id);
+            } else {
+                await db.from('user_preferences').insert({ user_id: p.user_id, ...upd });
+            }
+            // Log transaction
+            await db.from('transactions').insert({
+                user_id: p.user_id, type: 'out',
+                description: 'Investimento activado: ' + (levelName || ('Nível ' + (levelRank || ''))),
+                sub_description: (p.method || '').toUpperCase() + ' · ' + (p.tx_reference || ''),
+                amount: Number(p.amount), wallet_provider: p.method,
+                user_name: p.user_name, status: 'approved', method: p.method,
+                pending_payment_id: p.id
+            });
+            await db.from('pending_payments').update({ status: 'approved', processed_by: 'admin', approved_at: new Date().toISOString() }).eq('id', id);
+            await db.from('notifications').insert({
+                user_id: p.user_id, title: 'Investimento activado',
+                message: `O seu plano ${level || ''} foi activado com sucesso (${Number(p.amount).toFixed(2)} MT).`,
+                type: 'success', is_read: false
+            });
+            showToast('Investimento aprovado', 'success');
+            loadPendingInvestments();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    }
+
+    async function rejectInvestment(id) {
+        const reason = prompt('Motivo da rejeição (opcional):') || 'Rejeitado pela equipa';
+        try {
+            const { data: p } = await db.from('pending_payments').select('*').eq('id', id).single();
+            if (!p) return;
+            await db.from('pending_payments').update({ status: 'rejected', reason: reason, processed_by: 'admin' }).eq('id', id);
+            await db.from('notifications').insert({
+                user_id: p.user_id, title: 'Investimento rejeitado',
+                message: `O seu pedido de investimento de ${Number(p.amount).toFixed(2)} MT foi rejeitado. Motivo: ${reason}`,
+                type: 'error', is_read: false
+            });
+            showToast('Rejeitado', 'success');
+            loadPendingInvestments();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    }
+
+    /* ────────────────────────────────────────────────────────────
+       SISTEMA DE CONVITES — domínio + códigos
+       ──────────────────────────────────────────────────────────── */
+    async function saveSiteDomain() {
+        const v = (document.getElementById('siteDomainInput').value || '').trim().replace(/^https?:\/\//,'').replace(/\/+$/,'');
+        if (!v) { showToast('Insira um domínio', 'error'); return; }
+        try {
+            await db.from('system_settings').upsert({ key: 'site_domain', value: v }, { onConflict: 'key' });
+            document.getElementById('domainPreview').textContent = `https://${v}/?code=ABC1234`;
+            showToast('Domínio guardado', 'success');
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    }
+
+    function _genCode() {
+        const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let s = '';
+        for (let i = 0; i < 7; i++) s += A[Math.floor(Math.random() * A.length)];
+        return s;
+    }
+
+    async function generateAdminInviteCode() {
+        const result = document.getElementById('genCodeResult');
+        result.textContent = 'A gerar...';
+        try {
+            let code, attempts = 0;
+            while (attempts++ < 10) {
+                code = _genCode();
+                const { data: existing } = await db.from('invite_codes').select('code').eq('code', code).maybeSingle();
+                const { data: existingPref } = await db.from('user_preferences').select('user_id').eq('invite_code', code).maybeSingle();
+                if (!existing && !existingPref) break;
+            }
+            await db.from('invite_codes').insert({ code: code, source: 'admin', uses: 0, max_uses: null, is_active: true });
+            const { data: dom } = await db.from('system_settings').select('value').eq('key', 'site_domain').maybeSingle();
+            const domain = dom?.value || location.host;
+            result.innerHTML = `Código <strong style="color:var(--green); font-family:monospace;">${code}</strong> → <code>https://${domain}/?code=${code}</code>`;
+            loadInviteCodes();
+        } catch (e) { result.textContent = 'Erro: ' + e.message; }
+    }
+
+    async function loadInviteCodes() {
+        const tbody = document.getElementById('inviteCodesTbl');
+        if (!tbody) return;
+        try {
+            const { data: dom } = await db.from('system_settings').select('value').eq('key', 'site_domain').maybeSingle();
+            const domain = dom?.value || location.host;
+            const { data, error } = await db.from('invite_codes').select('*').order('created_at', { ascending: false }).limit(100);
+            if (error) throw error;
+            if (!data || !data.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sem códigos gerados pelo admin</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(c => `
+                <tr>
+                    <td><strong style="font-family:monospace;">${escapeHtml(c.code)}</strong></td>
+                    <td class="mono-num"><code style="font-size:12px;">https://${domain}/?code=${escapeHtml(c.code)}</code></td>
+                    <td>${c.uses || 0}${c.max_uses ? ' / ' + c.max_uses : ''}</td>
+                    <td class="date">${fd(c.created_at)}</td>
+                    <td><span class="status-pill ${c.is_active ? 'paid' : 'pending'}">${c.is_active ? 'Activo' : 'Inactivo'}</span></td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red); padding:14px;">Erro: ${e.message}</td></tr>`;
+        }
+    }
+
+    // Hook into Settings: also load domain
     const _origLoadSettings = loadSettings;
     loadSettings = async function() {
         await _origLoadSettings.apply(this, arguments);
-        await loadSmsWebhookConfig();
-        await loadSmsLog();
-        await loadPendingPayments();
+        try {
+            const { data: dom } = await db.from('system_settings').select('value').eq('key', 'site_domain').maybeSingle();
+            const inp = document.getElementById('siteDomainInput');
+            const prev = document.getElementById('domainPreview');
+            if (dom?.value && inp) {
+                inp.value = dom.value;
+                if (prev) prev.textContent = `https://${dom.value}/?code=ABC1234`;
+            }
+        } catch(_) {}
     };
 
 </script>
