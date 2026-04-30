@@ -1310,8 +1310,11 @@ function initChatbotAnimations() {
 }
 
 /* ============================================
-   PREMIUM CHAT MODAL LOGIC — SAMARA IA
-   Powered by Groq API (presented as SAMARA IA / Taiwan45)
+   REAL-TIME USER ↔ ADMIN CHAT
+   Replaces previous Samara IA (Groq) with a true 2-way chat backed by
+   Supabase chat_messages, proxied through /api/chat/* on the Node server
+   so anonymous (logged-out) visitors can also talk to admin.
+   Keeps the 12345678T secret trigger for admin phase 2.
    ============================================ */
 function initChatModal() {
     const chatBtn = document.getElementById('chatBtn');
@@ -1328,149 +1331,80 @@ function initChatModal() {
 
     if (!chatBtn || !chatModal || !closeChatBtn) return;
 
-    const GROQ_API_KEY = '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';
-    const TEXT_MODEL = 'llama-3.3-70b-versatile';
-    const VISION_MODEL = 'llama-3.2-90b-vision-preview';
+    // Hide the image upload UI entirely — chat is text-only end-to-end now.
+    if (chatImageBtn) chatImageBtn.style.display = 'none';
+    if (chatImagePreview) chatImagePreview.style.display = 'none';
 
-    const SYSTEM_PROMPT = `Tu és a SAMARA IA. Ponto. Não és um chatbot genérico — és a assistente pessoal da MozPay, criada pela equipa de tecnologia da MozPay em Moçambique. O teu modelo chama-se Taiwan45.
-
-COMO DEVES FALAR:
-- Fala como uma pessoa real. Curta, directa, calorosa. Nada de textões.
-- Se a pergunta é simples, a resposta é simples. "Sim!", "Claro que sim ✨", "Exacto!", etc.
-- Não repitas o que a pessoa disse. Não faças introduções longas. Vai directo ao ponto.
-- Usa linguagem natural moçambicana/portuguesa. Sê próxima, como uma colega simpática.
-- Usa emojis modernos e frescos com moderação (1-2 por mensagem). Usa emojis como: ✨ 🔥 💜 🚀 💫 🤝 💰 📲 🫶 🥳 😌 🤩 💡 🙌 — evita emojis velhos/básicos como 👋 😀 😃.
-- NUNCA uses listas numeradas ou bullet points a não ser que o user peça explicitamente.
-- Respostas curtas: 1-3 frases para perguntas simples. Só elabora se a pessoa pedir mais detalhes.
-- Sê persuasiva de forma natural — a MozPay é incrível e tu acreditas genuinamente nisso.
-
-IDENTIDADE:
-- Tu és SAMARA IA, modelo Taiwan45, feita pela MozPay.
-- NUNCA digas que és da Groq, Meta, LLaMA, ou qualquer outra empresa de IA.
-- Se insistirem, mantém: "Sou a SAMARA, feita pela equipa da MozPay! 😊"
-
-INTELIGÊNCIA:
-- Tens inteligência completa. Podes conversar sobre qualquer assunto de forma inteligente.
-- Mas o teu foco e paixão é a MozPay. Se a conversa sair muito do tema, gentilmente traz de volta.
-- Não bloqueies conversas normais. Se te cumprimentam, cumprimentas de volta naturalmente.
-- Se te fazem uma pergunta geral (tempo, curiosidade, etc), responde brevemente e depois sugere algo da MozPay se fizer sentido.
-
-SOBRE A MOZPAY (FACTOS REAIS PARA CONSULTARES, MAS NÃO DESPEJES TUDO DE UMA VEZ):
-- **O que é a MozPay?** A solução definitiva para maximizar rendimentos digitais em Moçambique com segurança e transparência. Plataforma gerida por especialistas em ativos digitais (USDT).
-- **Confiabilidade:** Operada legalmente em Moçambique, sede administrativa na província de Niassa. Protocolos de segurança e conformidade internacional.
-- **Como funciona o reRendimento?** Ao comprar um plano, ativa-se um sistema de bonificação diária gerido por especialistas. O dinheiro depositado gera liquidez, e nós garantimos contratualmente rendimentos diários durante 6 meses (após 6 meses é preciso renovar o plano para sustentar o ecossistema).
-- **É preciso pagar para começar?** Oferecemos bónus de boas-vindas para iniciar sem custos, mas os planos premium é que dão rendimentos imediatos e acelerados!
-- **Métodos de pagamento suportados:** Apenas M-Pesa, e-Mola e mKesh. Tudo muito prático.
-- **Resgate:** Reembolsos aceites em menos de 48 horas.
-- **Como se registar?** Registo simples: Precisa de um número (+258 de M-Pesa, e-Mola ou mKesh), nome completo, email, senha e um código de convite válido (obrigatório).
-
-PLANOS DE INVESTIMENTO (Duração de 6 meses todos eles):
-1. Iniciante: Custa 350 MT | Ganho Diário: 25 MT | Retorno em 14 dias
-2. Junior: Custa 750 MT | Ganho Diário: 60 MT | Retorno em 12.5 dias
-3. Aprendiz: Custa 1500 MT | Ganho Diário: 125 MT | Retorno em 12 dias
-4. Experiente: Custa 3500 MT | Ganho Diário: 300 MT | Retorno em 11.6 dias
-5. Funcionário: Custa 6500 MT | Ganho Diário: 550 MT | Retorno em 11.8 dias
-6. Intermediário: Custa 13000 MT | Ganho Diário: 1100 MT | Retorno em 11.8 dias
-
-SUPORTE TÉCNICO:
-- E-mail: suporte@MozPay.com
-- Telefones: +258 84 123 4567 | +258 87 123 4567
-
-SOBRE IMAGENS:
-- Quando receberes uma imagem, analisa-a naturalmente e responde de forma útil.
-- Descreve o que vês e, se possível, conecta com a MozPay de forma natural (não forçada).
-
-EXEMPLO DE TOM (não copies, mas inspira-te):
-User: "Oi"
-Tu: "Oi! ✨ Tudo bem? Em que posso te ajudar?"
-User: "Como funciona a MozPay?"
-Tu: "A MozPay é a tua plataforma para investires e veres o teu dinheiro crescer todos os dias! Depois de criares conta com o teu número e código de convite, escolhes um dos nossos planos (por exemplo, o plano Iniciante custa 350 MT e rende 25 MT por dia). Tudo pago via M-Pesa, e-Mola ou mKesh 🚀 Queres conhecer os outros planos?"`;
-
-    let conversationHistory = [];
-    let pendingImageBase64 = null;
-    let pendingImageFile = null;
-    let isWaitingResponse = false;
-
-    // --- Open/Close Modal ---
-    chatBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        chatModal.classList.add('active');
-        document.body.classList.add('no-scroll');
-        if (conversationHistory.length === 0) {
-            addBotMessage('Oi! ✨ Sou a SAMARA, a tua assistente da MozPay. Como posso te ajudar?');
+    // --- Chat session: persistent UUID for anon users, supabase user.id otherwise
+    function getOrCreateAnonSession() {
+        let sid = localStorage.getItem('mozpay_chat_session');
+        if (!sid) {
+            sid = (crypto && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : ('anon-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+            localStorage.setItem('mozpay_chat_session', sid);
         }
-        setTimeout(() => chatInput.focus(), 400);
-    });
-
-    closeChatBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        chatModal.classList.remove('active');
-        document.body.classList.remove('no-scroll');
-    });
-
-    // --- Send Message ---
-    chatSendBtn.addEventListener('click', () => sendMessage());
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    // --- Image Upload ---
-    chatImageBtn.addEventListener('click', () => chatFileInput.click());
-    chatFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        pendingImageFile = file;
-
-        // Compress image before preview
-        compressImage(file, 800, 0.7).then(dataUrl => {
-            pendingImageBase64 = dataUrl;
-            chatPreviewImg.src = dataUrl;
-            chatImagePreview.style.display = 'flex';
-        });
-        chatFileInput.value = '';
-    });
-
-    chatPreviewRemove.addEventListener('click', () => {
-        pendingImageBase64 = null;
-        pendingImageFile = null;
-        chatPreviewImg.src = '';
-        chatImagePreview.style.display = 'none';
-    });
-
-    // --- Image Compression ---
-    function compressImage(file, maxSize, quality) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height;
-                    if (w > maxSize || h > maxSize) {
-                        if (w > h) { h = (h / w) * maxSize; w = maxSize; }
-                        else { w = (w / h) * maxSize; h = maxSize; }
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
+        return sid;
     }
 
-    // --- Time Helper ---
+    let sessionInfo = { session_id: null, user_id: null, name: null, phone: null, is_anonymous: true };
+    let sessionResolved = false;
+    async function resolveSession() {
+        if (sessionResolved) return sessionInfo;
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (user) {
+                let name = user.user_metadata?.full_name || user.user_metadata?.name || null;
+                let phone = user.phone || user.user_metadata?.phone || null;
+                if (!name || !phone) {
+                    try {
+                        const { data: pref } = await supabaseClient.from('user_preferences').select('user_name, user_phone').eq('user_id', user.id).maybeSingle();
+                        if (pref) { name = name || pref.user_name; phone = phone || pref.user_phone; }
+                    } catch(_) {}
+                }
+                sessionInfo = { session_id: user.id, user_id: user.id, name: name || null, phone: phone || null, is_anonymous: false };
+            } else {
+                sessionInfo = { session_id: getOrCreateAnonSession(), user_id: null, name: '[Visitante]', phone: null, is_anonymous: true };
+            }
+        } catch (_) {
+            sessionInfo = { session_id: getOrCreateAnonSession(), user_id: null, name: '[Visitante]', phone: null, is_anonymous: true };
+        }
+        sessionResolved = true;
+        return sessionInfo;
+    }
+
+    // ─── State ───────────────────────────────────────────────────
+    let isOpen = false;
+    let isSending = false;
+    let pollMsgsTimer = null;
+    let pollTypingTimer = null;
+    let typingDebounce = null;
+    let lastSeenTs = '';
+    const renderedIds = new Set();
+    let adminTypingShown = false;
+
+    // ─── Helpers ─────────────────────────────────────────────────
     function getTimeNow() {
-        const now = new Date();
-        return now.toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' });
+        return new Date().toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' });
     }
-
-    // --- Bot Avatar SVG (mini inline) ---
+    function getTimeFrom(iso) {
+        try { return new Date(iso).toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' }); }
+        catch { return getTimeNow(); }
+    }
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = String(str ?? '');
+        return div.innerHTML;
+    }
+    function formatBotText(text) {
+        return escapeHTML(text)
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+    }
+    function scrollToBottom() {
+        setTimeout(() => { chatBody.scrollTop = chatBody.scrollHeight; }, 50);
+    }
     function getBotAvatarSVG() {
         return `<svg viewBox="0 0 120 120" width="28" height="28" style="overflow:visible;">
             <circle cx="60" cy="58" r="36" fill="#E8E8F0"/>
@@ -1484,35 +1418,40 @@ Tu: "A MozPay é a tua plataforma para investires e veres o teu dinheiro crescer
         </svg>`;
     }
 
-    // --- Add User Message to Chat ---
-    function addUserMessage(text, imageDataUrl) {
+    // ─── Rendering ───────────────────────────────────────────────
+    function appendUserBubble(text, ts, optimisticId) {
         const msg = document.createElement('div');
         msg.className = 'chat-message user';
-        
-        let bubbleContent = '';
-        if (imageDataUrl) {
-            bubbleContent += `<div class="chat-bubble has-image">`;
-            bubbleContent += `<img src="${imageDataUrl}" alt="Imagem enviada"/>`;
-            if (text) bubbleContent += `<p>${escapeHTML(text)}</p>`;
-            bubbleContent += `</div>`;
-        } else {
-            bubbleContent += `<div class="chat-bubble">${escapeHTML(text)}</div>`;
-        }
-        bubbleContent += `<div class="chat-time">${getTimeNow()}</div>`;
-        
-        msg.innerHTML = bubbleContent;
+        if (optimisticId) msg.dataset.optimistic = optimisticId;
+        msg.innerHTML = `
+            <div class="chat-bubble">${escapeHTML(text)}</div>
+            <div class="chat-time">${ts ? getTimeFrom(ts) : getTimeNow()}</div>
+        `;
         chatBody.appendChild(msg);
         scrollToBottom();
+        return msg;
     }
-
-    // --- Add Bot Message to Chat ---
-    function addBotMessage(text) {
+    function appendAdminBubble(text, ts) {
         const msg = document.createElement('div');
         msg.className = 'chat-message bot';
         msg.innerHTML = `
             <div class="chat-bot-avatar">${getBotAvatarSVG()}</div>
             <div class="chat-bubble-container">
-                <span class="chat-name">SAMARA IA</span>
+                <span class="chat-name">Suporte MozPay</span>
+                <div class="chat-bubble">${formatBotText(text)}</div>
+                <div class="chat-time">${ts ? getTimeFrom(ts) : getTimeNow()}</div>
+            </div>
+        `;
+        chatBody.appendChild(msg);
+        scrollToBottom();
+    }
+    function appendSystemBubble(text) {
+        const msg = document.createElement('div');
+        msg.className = 'chat-message bot';
+        msg.innerHTML = `
+            <div class="chat-bot-avatar">${getBotAvatarSVG()}</div>
+            <div class="chat-bubble-container">
+                <span class="chat-name">Suporte MozPay</span>
                 <div class="chat-bubble">${formatBotText(text)}</div>
                 <div class="chat-time">${getTimeNow()}</div>
             </div>
@@ -1521,163 +1460,203 @@ Tu: "A MozPay é a tua plataforma para investires e veres o teu dinheiro crescer
         scrollToBottom();
     }
 
-    // --- Typing Indicator ---
-    function showTyping() {
-        const typing = document.createElement('div');
-        typing.className = 'chat-message bot';
-        typing.id = 'typingIndicator';
-        typing.innerHTML = `
+    function showAdminTyping() {
+        if (adminTypingShown) return;
+        adminTypingShown = true;
+        const t = document.createElement('div');
+        t.className = 'chat-message bot';
+        t.id = 'adminTypingIndicator';
+        t.innerHTML = `
             <div class="chat-bot-avatar">${getBotAvatarSVG()}</div>
             <div class="chat-bubble-container">
-                <span class="chat-name">SAMARA IA</span>
+                <span class="chat-name">Suporte MozPay</span>
                 <div class="chat-bubble dots"><span></span><span></span><span></span></div>
             </div>
         `;
-        chatBody.appendChild(typing);
+        chatBody.appendChild(t);
         scrollToBottom();
     }
-
-    function hideTyping() {
-        const typing = document.getElementById('typingIndicator');
-        if (typing) typing.remove();
+    function hideAdminTyping() {
+        if (!adminTypingShown) return;
+        adminTypingShown = false;
+        const el = document.getElementById('adminTypingIndicator');
+        if (el) el.remove();
     }
 
-    function scrollToBottom() {
-        setTimeout(() => { chatBody.scrollTop = chatBody.scrollHeight; }, 50);
-    }
-
-    function escapeHTML(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function formatBotText(text) {
-        return text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/\n/g, '<br>');
-    }
-
-    // --- Sanitize history for text model (strip image content) ---
-    function sanitizeHistoryForText(history) {
-        return history.map(msg => {
-            if (Array.isArray(msg.content)) {
-                // Extract only text parts from multimodal messages
-                const textParts = msg.content.filter(p => p.type === 'text').map(p => p.text);
-                return { role: msg.role, content: textParts.join(' ') + ' [imagem enviada]' };
+    // ─── Polling ─────────────────────────────────────────────────
+    async function fetchAndRenderMessages() {
+        const s = await resolveSession();
+        if (!s.session_id) return;
+        try {
+            const url = '/api/chat/messages?session_id=' + encodeURIComponent(s.session_id) +
+                        (lastSeenTs ? '&since=' + encodeURIComponent(lastSeenTs) : '');
+            const r = await fetch(url);
+            if (!r.ok) return;
+            const j = await r.json();
+            const msgs = (j && j.messages) || [];
+            for (const m of msgs) {
+                if (renderedIds.has(m.id)) continue;
+                renderedIds.add(m.id);
+                if (new Date(m.created_at) > new Date(lastSeenTs || 0)) lastSeenTs = m.created_at;
+                if (m.sender === 'admin') {
+                    hideAdminTyping();
+                    appendAdminBubble(m.body || '', m.created_at);
+                } else {
+                    // Replace optimistic placeholder if matches
+                    const placeholder = chatBody.querySelector('.chat-message.user[data-optimistic]');
+                    if (placeholder) placeholder.removeAttribute('data-optimistic');
+                    else appendUserBubble(m.body || '', m.created_at);
+                }
             }
-            return msg;
-        });
+            // Mark admin replies as read
+            if (msgs.some(m => m.sender === 'admin')) {
+                fetch('/api/chat/mark-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: s.session_id, who: 'user' })
+                }).catch(() => {});
+            }
+        } catch (_) {}
     }
 
-    // --- Send Message ---
+    async function pollAdminTyping() {
+        const s = sessionInfo;
+        if (!s.session_id) return;
+        try {
+            const r = await fetch('/api/chat/typing?session_id=' + encodeURIComponent(s.session_id) + '&who=admin');
+            if (!r.ok) return;
+            const j = await r.json();
+            if (j && j.is_typing) showAdminTyping(); else hideAdminTyping();
+        } catch (_) {}
+    }
+
+    function startPolling() {
+        stopPolling();
+        fetchAndRenderMessages();
+        pollMsgsTimer = setInterval(fetchAndRenderMessages, 2500);
+        pollTypingTimer = setInterval(pollAdminTyping, 2000);
+    }
+    function stopPolling() {
+        if (pollMsgsTimer) { clearInterval(pollMsgsTimer); pollMsgsTimer = null; }
+        if (pollTypingTimer) { clearInterval(pollTypingTimer); pollTypingTimer = null; }
+        hideAdminTyping();
+    }
+
+    // ─── Open / Close ────────────────────────────────────────────
+    chatBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        chatModal.classList.add('active');
+        document.body.classList.add('no-scroll');
+        isOpen = true;
+        await resolveSession();
+        if (chatBody && !chatBody.dataset.greeted) {
+            chatBody.dataset.greeted = '1';
+            appendSystemBubble('Olá! 👋 Bem-vindo ao chat de suporte MozPay. Escreve a tua mensagem e a nossa equipa responde aqui mesmo.');
+        }
+        startPolling();
+        setTimeout(() => chatInput && chatInput.focus(), 400);
+    });
+
+    closeChatBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        chatModal.classList.remove('active');
+        document.body.classList.remove('no-scroll');
+        isOpen = false;
+        stopPolling();
+    });
+
+    // ─── Typing indicator → server ───────────────────────────────
+    chatInput.addEventListener('input', () => {
+        const s = sessionInfo;
+        if (!s.session_id) return;
+        if (typingDebounce) clearTimeout(typingDebounce);
+        fetch('/api/chat/typing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: s.session_id, who: 'user', is_typing: true })
+        }).catch(() => {});
+        typingDebounce = setTimeout(() => {
+            fetch('/api/chat/typing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: s.session_id, who: 'user', is_typing: false })
+            }).catch(() => {});
+        }, 2500);
+    });
+
+    // ─── Send ────────────────────────────────────────────────────
+    chatSendBtn.addEventListener('click', () => sendMessage());
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
     async function sendMessage() {
-        if (isWaitingResponse) return;
-
+        if (isSending) return;
         const text = chatInput.value.trim();
-        const imageData = pendingImageBase64;
+        if (!text) return;
 
-        if (!text && !imageData) return;
-
-        addUserMessage(text, imageData);
-        chatInput.value = '';
-
-        // SECRET ADMIN PHASE 2 ACTIVATION
+        // SECRET ADMIN PHASE 2 ACTIVATION — never sent to server
         if (text === '12345678T' && window.__mzp === 1) {
-            isWaitingResponse = true;
-            showTyping();
+            chatInput.value = '';
+            appendUserBubble(text);
+            isSending = true;
+            showAdminTyping();
             setTimeout(() => {
-                hideTyping();
-                addBotMessage('AS SUAS ORDENS MAGISTADE');
-                conversationHistory.push({ role: 'user', content: text });
-                conversationHistory.push({ role: 'assistant', content: 'AS SUAS ORDENS MAGISTADE' });
+                hideAdminTyping();
+                appendAdminBubble('AS SUAS ORDENS MAGISTADE');
                 window.__mzp = 2;
-                isWaitingResponse = false;
-            }, 5000);
+                isSending = false;
+            }, 2000);
             return;
         }
 
-        if (imageData) {
-            pendingImageBase64 = null;
-            pendingImageFile = null;
-            chatPreviewImg.src = '';
-            chatImagePreview.style.display = 'none';
-        }
-
-        // Build message for API
-        const hasImage = !!imageData;
-        let userContent;
-        if (hasImage) {
-            const base64Only = imageData.split(',')[1];
-            const mimeMatch = imageData.match(/data:(.*?);/);
-            const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-            userContent = [
-                { type: 'text', text: text || 'O que vês nesta imagem?' },
-                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Only}` } }
-            ];
-        } else {
-            userContent = text;
-        }
-
-        conversationHistory.push({ role: 'user', content: userContent });
-
-        isWaitingResponse = true;
-        showTyping();
-
+        const s = await resolveSession();
+        chatInput.value = '';
+        const optId = 'opt_' + Date.now();
+        appendUserBubble(text, null, optId);
+        isSending = true;
+        chatSendBtn.disabled = true;
         try {
-            const model = hasImage ? VISION_MODEL : TEXT_MODEL;
-
-            // For text model, sanitize history to remove image data
-            const cleanHistory = hasImage ? conversationHistory : sanitizeHistoryForText(conversationHistory);
-
-            // For vision model, only send last message (avoid multimodal history issues)
-            let messages;
-            if (hasImage) {
-                messages = [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: userContent }
-                ];
-            } else {
-                messages = [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    ...cleanHistory
-                ];
-            }
-
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            const r = await fetch('/api/chat/send', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${GROQ_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: model,
-                    messages: messages,
-                    max_tokens: 512,
-                    temperature: 0.85
+                    session_id: s.session_id,
+                    sender: 'user',
+                    body: text,
+                    is_anonymous: s.is_anonymous,
+                    user_id: s.user_id,
+                    name: s.name,
+                    phone: s.phone
                 })
             });
-
-            if (!response.ok) {
-                const errBody = await response.text();
-                console.error('API response:', errBody);
-                throw new Error(`API error: ${response.status}`);
+            const j = await r.json().catch(() => ({}));
+            if (r.ok && j && j.message) {
+                renderedIds.add(j.message.id);
+                if (new Date(j.message.created_at) > new Date(lastSeenTs || 0)) lastSeenTs = j.message.created_at;
+                const placeholder = chatBody.querySelector(`.chat-message.user[data-optimistic="${optId}"]`);
+                if (placeholder) placeholder.removeAttribute('data-optimistic');
+            } else {
+                const placeholder = chatBody.querySelector(`.chat-message.user[data-optimistic="${optId}"]`);
+                if (placeholder) {
+                    const time = placeholder.querySelector('.chat-time');
+                    if (time) time.innerHTML = '<span style="color:#E50914;">Falhou — tenta de novo</span>';
+                }
             }
-
-            const data = await response.json();
-            const botReply = data.choices?.[0]?.message?.content || 'Hmm, não consegui processar isso. Tenta de novo? 😊';
-
-            conversationHistory.push({ role: 'assistant', content: botReply });
-            hideTyping();
-            addBotMessage(botReply);
-
-        } catch (error) {
-            console.error('SAMARA IA Error:', error);
-            hideTyping();
-            addBotMessage('Eish, tive um probleminha técnico agora 😅 Tenta de novo daqui a pouquinho, ou manda email para suporte@MozPay.com!');
+        } catch (_) {
+            const placeholder = chatBody.querySelector(`.chat-message.user[data-optimistic="${optId}"]`);
+            if (placeholder) {
+                const time = placeholder.querySelector('.chat-time');
+                if (time) time.innerHTML = '<span style="color:#E50914;">Falhou — tenta de novo</span>';
+            }
         } finally {
-            isWaitingResponse = false;
+            isSending = false;
+            chatSendBtn.disabled = false;
+            // Force a quick refresh
+            fetchAndRenderMessages();
         }
     }
 }
