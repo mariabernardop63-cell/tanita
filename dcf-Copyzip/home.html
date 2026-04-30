@@ -3549,6 +3549,32 @@
             flex-shrink: 0;
         }
 
+        /* Hide floating chat launcher while the chat modal is open */
+        .chat-modal.active ~ .floating-chat,
+        body:has(.chat-modal.active) .floating-chat { display: none !important; }
+
+        /* PENDING-state overrides — keeps premium look but no rejection vibe */
+        .pf-pending .pf-badge-circle {
+            background: linear-gradient(145deg, #4A90E2 0%, #1F5BB7 100%);
+            box-shadow: 0 10px 34px rgba(31, 91, 183, 0.38), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.22);
+            animation: pf-badge-pop 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+        }
+        .pf-pending .pf-badge-halo { background: radial-gradient(circle, rgba(74,144,226,0.45) 0%, rgba(74,144,226,0) 70%); }
+        .pf-pending .pf-badge-x { animation: pf-clock-spin 1.6s linear infinite; }
+        .pf-pending .pf-badge-x line { stroke-dashoffset: 0; stroke: #FFFFFF; }
+        .pf-pending .pf-status-pill {
+            background: rgba(74, 144, 226, 0.12) !important;
+            color: #1F5BB7 !important;
+            border-color: rgba(74, 144, 226, 0.22) !important;
+        }
+        .pf-pending .pf-reason-chip {
+            background: rgba(74, 144, 226, 0.10) !important;
+            color: #1F5BB7 !important;
+            border-color: rgba(74, 144, 226, 0.20) !important;
+        }
+        .pf-pending .pf-title { color: #1F5BB7; }
+        @keyframes pf-clock-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
         /* Status pill (Recusado) */
         .pf-status-pill {
             display: inline-flex;
@@ -6146,7 +6172,7 @@
                     </div>
                     <span class="ph-action-label">Investir</span>
                 </button>
-                <button class="ph-action">
+                <button class="ph-action" id="profileMoreBtn">
                     <div class="ph-action-circle ph-more">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                             <circle cx="5" cy="12" r="1" fill="currentColor"></circle>
@@ -6395,7 +6421,7 @@
 
             <!-- Limits -->
             <div class="wd-limits">
-                <div class="wd-limit-row"><strong>3.000,00 MT</strong> restante do seu limite diário de levantamento</div>
+                <div class="wd-limit-row"><strong>10.000,00 MT</strong> restante do seu limite diário de levantamento</div>
 
             </div>
 
@@ -6863,7 +6889,7 @@
 
                 <div class="ps-row">
                     <span class="ps-row-label">Taxa</span>
-                    <span class="ps-row-value">5,00 MT</span>
+                    <span class="ps-row-value" id="psFee">0,00 MT</span>
                 </div>
 
                 <div class="ps-row">
@@ -7166,7 +7192,14 @@
                         Copiar
                     </button>
                 </div>
-                <p class="ref-card-hint">Partilhe este código com os seus amigos para ganhar bónus exclusivos quando eles se registarem.</p>
+                <div class="ref-link-wrap" style="margin-top:10px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;">
+                    <span id="refLinkText" style="flex:1;font-family:monospace;font-size:0.78rem;color:rgba(255,255,255,0.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">https://...</span>
+                    <button class="ref-action-btn" id="refCopyLinkBtn" style="flex-shrink:0;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copiar link
+                    </button>
+                </div>
+                <p class="ref-card-hint">Partilhe este código (ou o link completo) com os seus amigos para ganhar bónus exclusivos quando eles se registarem.</p>
             </div>
 
             <!-- Milestone 1: Network Bonus -->
@@ -7696,7 +7729,7 @@
             </div>
             <div class="chat-header-text">
                 <h3 class="chat-title">SAMARA IA</h3>
-                <p class="chat-subtitle">A SAMARA é uma IA oficial da MozPay, feita para automatizar o atendimento ao cliente, de uma maneira mais eficiente.</p>
+                <p class="chat-subtitle">SAMARA é a assistente oficial da MozPay. Disponível 24/7 para esclarecer dúvidas, acompanhar depósitos e levantamentos, e proteger a tua conta.</p>
             </div>
         </div>
         

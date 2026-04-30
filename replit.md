@@ -41,3 +41,11 @@ MozPay is a mobile-first digital earning platform targeting the Mozambican marke
 ## Deployment
 - Target: autoscale
 - Run command: `node dcf-Copyzip/server.js`
+
+## Important Implementation Notes
+- **`home.js` is encoded as UTF-16 LE with BOM.** Standard `read`/`edit` tools fail on it. Use the Node.js editor template at `/tmp/edit_home.js` (preserves BOM via `Buffer.concat([Buffer.from([0xFF,0xFE]), Buffer.from(s, "utf16le")])`) for any modification.
+- **Supabase tables in use**: `wallets` (balance, total_deposited, total_withdrawn, level_plan, level_expires_at), `pending_payments` (status: pending/approved/rejected — `amount` rows where status='approved' = MozPay revenue), `transactions`, `withdrawal_requests`, `refund_requests`, `chat_messages` (admin↔user realtime chat — separate from below), `admin_messages` (Reportes/Denúncias from Samara IA — columns: `id`, `sender_id`, `sender_name`, `sender_phone`, `subject`, `message`, `status` (default 'pending'), `admin_reply`, `replied_by`, `replied_at`, `created_at`), `notifications`, `online_users`, `system_settings`, `sms_log`, `user_preferences` (invited_by).
+- **Withdrawals**: minimum 50 MT, maximum 10 000 MT, fee computed by `calcFee(amount)` (3% with min 5 MT capped at 50 MT) — applied uniformly across home.html and home.js. Investments use 0 fee.
+- **Investment plans** activate `wallets.level_plan` (label) + `wallets.level_expires_at` (180 days) on admin approval.
+- **Reportes admin section** (`page-reports` in admin.html) reads/writes `admin_messages` with status `pending`/`resolved`. Sidebar badge `#reportsBadge` is updated by `loadDashboard()` and `loadReports()`.
+- **Profile painel "Mais" button** (`#profileMoreBtn`) switches the profile to the Definições tab (`data-tab="2"`).

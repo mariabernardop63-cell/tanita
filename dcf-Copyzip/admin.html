@@ -354,6 +354,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 Mensagens
             </a>
+            <a class="nav-item" data-pg="reports">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Reportes
+                <span class="badge" id="reportsBadge">0</span>
+            </a>
 
             <div class="sb-group">Sistema</div>
             <a class="nav-item" data-pg="settings">
@@ -819,6 +824,41 @@
             </style>
         </div>
 
+        <!-- REPORTES / DENÚNCIAS -->
+        <div class="page-view" id="page-reports">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Reportes & Denúncias</h1>
+                    <p class="page-subtitle">Tickets enviados via Central de Atendimento (Samara IA).</p>
+                </div>
+                <div class="header-actions">
+                    <select class="form-input" id="reportsFilter" style="max-width:180px;">
+                        <option value="pending">Abertos</option>
+                        <option value="resolved">Resolvidos</option>
+                        <option value="all">Todos</option>
+                    </select>
+                    <div class="section-badge" id="reportsCountBadge">0 reportes</div>
+                </div>
+            </div>
+            <div class="section animate-enter stagger-1" style="padding:0;">
+                <div id="reportsList" style="padding:18px; display:flex; flex-direction:column; gap:12px;">
+                    <div class="empty-state" style="padding:32px 16px; text-align:center; color:var(--text-secondary);">A carregar reportes…</div>
+                </div>
+            </div>
+            <style>
+                .report-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; transition: var(--transition); }
+                .report-card:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(229,9,20,0.08); }
+                .report-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+                .report-card-user { font-weight:600; color:var(--text-primary); font-size:14px; }
+                .report-card-meta { font-size:12px; color:var(--text-muted); margin-top:2px; }
+                .report-card-cat { font-size:11px; padding:3px 10px; border-radius:999px; background:rgba(229,9,20,0.1); color:var(--primary); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+                .report-card-body { color:var(--text-primary); font-size:14px; line-height:1.5; padding:10px 12px; background:var(--surface-light); border-radius:var(--radius-sm); white-space:pre-wrap; }
+                .report-card-actions { display:flex; gap:8px; margin-top:12px; }
+                .report-status-resolved { opacity:0.7; }
+                .report-status-resolved .report-card-cat { background:rgba(34,197,94,0.12); color:#22C55E; }
+            </style>
+        </div>
+
         <!-- SETTINGS -->
         <div class="page-view" id="page-settings">
             <div class="page-header">
@@ -1060,6 +1100,7 @@
             else if(pg === 'withdrawals') loadWds();
             else if(pg === 'investments') loadInv();
             else if(pg === 'messages') loadMsgs();
+            else if(pg === 'reports') loadReports();
             else if(pg === 'online-users') loadOnlineUsers();
             else if(pg === 'refunds') loadRefunds();
             else if(pg === 'notifications') loadNotifications();
@@ -1168,12 +1209,12 @@
     async function loadDashboard() {
         console.log('📊 Carregando dashboard...');
         try {
-            // Total deposits
-            const { data: deps, error: depsErr } = await db.from('transactions').select('amount').eq('type', 'dep');
-            console.log('📊 Depósitos:', deps, depsErr);
-            let totalDep = 0;
-            if(deps) deps.forEach(d => totalDep += Math.abs(d.amount || 0));
-            document.getElementById('s1').textContent = fmt(totalDep) + ' MT';
+            // Saldo Principal da MozPay = soma de TODOS os depósitos e investimentos aprovados (receita da MozPay)
+            const { data: revenue, error: revErr } = await db.from('pending_payments').select('amount').eq('status', 'approved');
+            console.log('📊 Receita MozPay:', revenue, revErr);
+            let totalRev = 0;
+            if(revenue) revenue.forEach(r => totalRev += Number(r.amount || 0));
+            document.getElementById('s1').textContent = fmt(totalRev) + ' MT';
 
             // Users count - usar contagem de wallets
             const { count: usersCount, error: usersErr } = await db.from('wallets').select('*', { count: 'exact', head: true });
@@ -1182,10 +1223,10 @@
             document.getElementById('usersBadge').textContent = usersCount || 0;
             document.getElementById('usersBadge').className = usersCount > 0 ? 'badge show' : 'badge';
 
-            // Investors
-            const { data: invs, error: invsErr } = await db.from('user_preferences').select('id').not('active_investment', 'is', null);
-            console.log('📊 Investidores:', invs, invsErr);
-            document.getElementById('s3').textContent = invs ? invs.length : 0;
+            // Investors - utilizadores com plano de nível activo
+            const { count: invsCount, error: invsErr } = await db.from('wallets').select('*', { count: 'exact', head: true }).not('level_plan', 'is', null);
+            console.log('📊 Investidores:', invsCount, invsErr);
+            document.getElementById('s3').textContent = invsCount || 0;
 
             // Pending WDs
             const { count: wdCount, error: wdErr } = await db.from('withdrawal_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
@@ -1212,6 +1253,11 @@
             const { count: refundCount } = await db.from('refund_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
             const refBadge = document.getElementById('refundsBadge');
             if(refBadge) { refBadge.textContent = refundCount || 0; refBadge.className = refundCount > 0 ? 'badge show' : 'badge'; }
+
+            // Reports badge
+            const { count: reportsCount } = await db.from('admin_messages').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+            const repBadge = document.getElementById('reportsBadge');
+            if(repBadge) { repBadge.textContent = reportsCount || 0; repBadge.className = reportsCount > 0 ? 'badge show' : 'badge'; }
 
             // Recent Txs
             const { data: recents, error: recErr } = await db.from('transactions').select('*').order('created_at', { ascending: false }).limit(10);
@@ -1673,6 +1719,105 @@
         }
     });
 
+    // ---- Reportes / Denúncias ----
+    let _reportsCache = [];
+    async function loadReports() {
+        const list = document.getElementById('reportsList');
+        const filterEl = document.getElementById('reportsFilter');
+        const badge = document.getElementById('reportsCountBadge');
+        const sideBadge = document.getElementById('reportsBadge');
+        if (!list) return;
+        list.innerHTML = '<div class="empty-state" style="padding:32px 16px; text-align:center; color:var(--text-secondary);">A carregar reportes…</div>';
+        try {
+            const { data, error } = await db
+                .from('admin_messages')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(200);
+            if (error) throw error;
+            _reportsCache = data || [];
+        } catch (e) {
+            list.innerHTML = `<div class="empty-state" style="padding:32px 16px; color:var(--red);">Erro ao carregar: ${e.message}</div>`;
+            return;
+        }
+        renderReports();
+        if (sideBadge) {
+            const open = _reportsCache.filter(r => (r.status || 'pending') === 'pending').length;
+            sideBadge.textContent = open;
+            sideBadge.style.display = open > 0 ? '' : 'none';
+        }
+        if (filterEl && !filterEl._wired) {
+            filterEl._wired = true;
+            filterEl.addEventListener('change', renderReports);
+        }
+    }
+
+    function renderReports() {
+        const list = document.getElementById('reportsList');
+        const filterEl = document.getElementById('reportsFilter');
+        const badge = document.getElementById('reportsCountBadge');
+        if (!list) return;
+        const filter = filterEl?.value || 'pending';
+        const items = _reportsCache.filter(r => {
+            const st = r.status || 'pending';
+            if (filter === 'all') return true;
+            return st === filter;
+        });
+        if (badge) badge.textContent = `${items.length} reporte${items.length === 1 ? '' : 's'}`;
+        if (items.length === 0) {
+            list.innerHTML = '<div class="empty-state" style="padding:32px 16px; text-align:center; color:var(--text-secondary);">Sem reportes nesta categoria.</div>';
+            return;
+        }
+        list.innerHTML = items.map(r => {
+            const status = r.status || 'pending';
+            const cat = (r.subject || 'Geral');
+            const userName = r.sender_name || 'Anónimo';
+            const userPhone = r.sender_phone || '';
+            const body = (r.message || '').replace(/[<>]/g, c => ({'<':'&lt;','>':'&gt;'}[c]));
+            return `
+                <div class="report-card ${status === 'resolved' ? 'report-status-resolved' : ''}" data-id="${r.id}">
+                    <div class="report-card-head">
+                        <div>
+                            <div class="report-card-user">${userName}</div>
+                            <div class="report-card-meta">${userPhone ? userPhone + ' · ' : ''}${fd(r.created_at)}</div>
+                        </div>
+                        <span class="report-card-cat">${status === 'resolved' ? '✓ Resolvido · ' : ''}${cat}</span>
+                    </div>
+                    <div class="report-card-body">${body}</div>
+                    <div class="report-card-actions">
+                        ${status === 'pending'
+                            ? `<button class="btn-primary" onclick="resolveReport('${r.id}')">Marcar como Resolvido</button>`
+                            : `<button class="btn-secondary" onclick="reopenReport('${r.id}')">Reabrir</button>`
+                        }
+                        <button class="btn-secondary" onclick="deleteReport('${r.id}')">Eliminar</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.resolveReport = async function(id) {
+        try {
+            await db.from('admin_messages').update({ status: 'resolved', replied_at: new Date().toISOString() }).eq('id', id);
+            showToast('Reporte resolvido', 'success');
+            loadReports();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    };
+    window.reopenReport = async function(id) {
+        try {
+            await db.from('admin_messages').update({ status: 'pending' }).eq('id', id);
+            loadReports();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    };
+    window.deleteReport = async function(id) {
+        if (!confirm('Eliminar este reporte definitivamente?')) return;
+        try {
+            await db.from('admin_messages').delete().eq('id', id);
+            showToast('Reporte eliminado', 'success');
+            loadReports();
+        } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+    };
+
     async function loadNotifications() {
         // Notifications page already has its own send form. Load recent sent ones.
         const { data } = await db.from('notifications').select('*').order('created_at', { ascending: false }).limit(30);
@@ -1940,13 +2085,14 @@
             if (error) throw error;
             if (p.status !== 'pending') { showToast('Já processado', 'error'); return; }
 
-            // Credit wallet
-            const { data: wallet } = await db.from('wallets').select('balance').eq('user_id', p.user_id).maybeSingle();
+            // Credit wallet + accumulate total_deposited
+            const { data: wallet } = await db.from('wallets').select('balance, total_deposited').eq('user_id', p.user_id).maybeSingle();
             const newBal = Number(wallet?.balance || 0) + Number(p.amount);
+            const newTotalDep = Number(wallet?.total_deposited || 0) + Number(p.amount);
             if (wallet) {
-                await db.from('wallets').update({ balance: newBal }).eq('user_id', p.user_id);
+                await db.from('wallets').update({ balance: newBal, total_deposited: newTotalDep }).eq('user_id', p.user_id);
             } else {
-                await db.from('wallets').insert({ user_id: p.user_id, balance: newBal });
+                await db.from('wallets').insert({ user_id: p.user_id, balance: newBal, total_deposited: newTotalDep });
             }
             // Log transaction
             await db.from('transactions').insert({
@@ -1967,6 +2113,7 @@
             });
             showToast('Depósito aprovado', 'success');
             loadPendingDeposits();
+            loadDashboard();
         } catch (e) { showToast('Erro: ' + e.message, 'error'); }
     }
 
@@ -1994,22 +2141,31 @@
             if (p.status !== 'pending') { showToast('Já processado', 'error'); return; }
             const levelName = p.level_name || null;
             const levelRank = p.level_rank || null;
+            const planLabel = levelName || ('Nível ' + (levelRank || ''));
 
-            // Activate investment in user_preferences
-            const { data: pref } = await db.from('user_preferences').select('*').eq('user_id', p.user_id).maybeSingle();
-            const upd = {
-                active_level: levelRank,
-                active_level_name: levelName
-            };
-            if (pref) {
-                await db.from('user_preferences').update(upd).eq('user_id', p.user_id);
+            // Activate level in wallets (180-day duration) + accumulate total_deposited
+            const expires = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: wallet2 } = await db.from('wallets').select('balance, total_deposited').eq('user_id', p.user_id).maybeSingle();
+            const newTotalDep2 = Number(wallet2?.total_deposited || 0) + Number(p.amount);
+            if (wallet2) {
+                await db.from('wallets').update({
+                    level_plan: planLabel,
+                    level_expires_at: expires,
+                    total_deposited: newTotalDep2
+                }).eq('user_id', p.user_id);
             } else {
-                await db.from('user_preferences').insert({ user_id: p.user_id, ...upd });
+                await db.from('wallets').insert({
+                    user_id: p.user_id,
+                    balance: 0,
+                    level_plan: planLabel,
+                    level_expires_at: expires,
+                    total_deposited: newTotalDep2
+                });
             }
             // Log transaction
             await db.from('transactions').insert({
                 user_id: p.user_id, type: 'out',
-                description: 'Investimento activado: ' + (levelName || ('Nível ' + (levelRank || ''))),
+                description: 'Investimento activado: ' + planLabel,
                 sub_description: (p.method || '').toUpperCase() + ' · ' + (p.tx_reference || ''),
                 amount: Number(p.amount), wallet_provider: p.method,
                 user_name: p.user_name, status: 'approved', method: p.method,
@@ -2018,11 +2174,12 @@
             await db.from('pending_payments').update({ status: 'approved', processed_by: 'admin', approved_at: new Date().toISOString() }).eq('id', id);
             await db.from('notifications').insert({
                 user_id: p.user_id, title: 'Investimento activado',
-                message: `O seu plano ${level || ''} foi activado com sucesso (${Number(p.amount).toFixed(2)} MT).`,
+                message: `O seu plano ${planLabel} foi activado com sucesso (${Number(p.amount).toFixed(2)} MT). Validade: 180 dias.`,
                 type: 'success', is_read: false
             });
             showToast('Investimento aprovado', 'success');
             loadPendingInvestments();
+            loadDashboard();
         } catch (e) { showToast('Erro: ' + e.message, 'error'); }
     }
 
@@ -2073,7 +2230,9 @@
                 const { data: existingPref } = await db.from('user_preferences').select('user_id').eq('invite_code', code).maybeSingle();
                 if (!existing && !existingPref) break;
             }
-            await db.from('invite_codes').insert({ code: code, source: 'admin', uses: 0, max_uses: null, is_active: true });
+            // Existing schema only has: code, created_by, used_by_user_id, used_at, created_at
+            const { error: insErr } = await db.from('invite_codes').insert({ code: code });
+            if (insErr) throw insErr;
             const { data: dom } = await db.from('system_settings').select('value').eq('key', 'site_domain').maybeSingle();
             const domain = dom?.value || location.host;
             result.innerHTML = `Código <strong style="color:var(--green); font-family:monospace;">${code}</strong> → <code>https://${domain}/?code=${code}</code>`;
@@ -2093,15 +2252,17 @@
                 tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Sem códigos gerados pelo admin</td></tr>';
                 return;
             }
-            tbody.innerHTML = data.map(c => `
+            tbody.innerHTML = data.map(c => {
+                const used = !!c.used_by_user_id;
+                return `
                 <tr>
                     <td><strong style="font-family:monospace;">${escapeHtml(c.code)}</strong></td>
                     <td class="mono-num"><code style="font-size:12px;">https://${domain}/?code=${escapeHtml(c.code)}</code></td>
-                    <td>${c.uses || 0}${c.max_uses ? ' / ' + c.max_uses : ''}</td>
+                    <td>${used ? '1 / 1' : '0 / 1'}</td>
                     <td class="date">${fd(c.created_at)}</td>
-                    <td><span class="status-pill ${c.is_active ? 'paid' : 'pending'}">${c.is_active ? 'Activo' : 'Inactivo'}</span></td>
-                </tr>
-            `).join('');
+                    <td><span class="status-pill ${used ? 'pending' : 'paid'}">${used ? 'Usado' : 'Activo'}</span></td>
+                </tr>`;
+            }).join('');
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red); padding:14px;">Erro: ${e.message}</td></tr>`;
         }

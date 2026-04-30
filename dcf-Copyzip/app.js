@@ -27,8 +27,8 @@ window.__mozpayShowMaintenanceScreen = function showMaintenanceScreen() {
     window.__mozpayMaintenanceShown = true;
 
     document.body.innerHTML = `
-        <div id="maintScreen" style="position:fixed;inset:0;background:#050505;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:'Hanken Grotesk',sans-serif;text-align:center;padding:20px;">
-            <div id="maintLogo" role="button" aria-label="Logo MozPay" style="margin-bottom:24px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;">
+        <div id="maintScreen" style="position:fixed;inset:0;background:#050505;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:'Hanken Grotesk',sans-serif;text-align:center;padding:20px;overflow:hidden;">
+            <div id="maintLogo" role="button" aria-label="Logo MozPay" style="margin-bottom:24px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:none;padding:14px;border-radius:14px;">
                 <svg viewBox="0 0 40 40" width="60" height="60" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;pointer-events:none;">
                     <rect width="40" height="40" rx="10" fill="#E50914"/>
                     <path d="M12 10 L12 30 L17 30 L17 20 L20 25 L23 20 L23 30 L28 30 L28 10 L23 10 L20 16 L17 10 Z" fill="white"/>
@@ -36,61 +36,78 @@ window.__mozpayShowMaintenanceScreen = function showMaintenanceScreen() {
             </div>
             <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:12px;">Em Manutenção</h1>
             <p style="color:rgba(255,255,255,0.6);font-size:1rem;max-width:320px;line-height:1.6;">A plataforma está temporariamente indisponível para manutenção. Voltaremos em breve!</p>
-            <div id="maintProgressWrap" style="margin-top:28px;width:160px;height:3px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;opacity:0;transition:opacity .25s ease;">
-                <div id="maintProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#E50914,#FF4E5B);transition:width .15s linear;"></div>
-            </div>
             <p style="color:rgba(255,255,255,0.3);margin-top:32px;font-size:0.85rem;">© MozPay 2025</p>
         </div>`;
 
     // 10-second hold gesture on the logo to open admin login screen.
+    // No visible progress bar — the gesture is hidden so regular users
+    // never know an admin entry exists.
     const logo = document.getElementById('maintLogo');
-    const wrap = document.getElementById('maintProgressWrap');
-    const bar  = document.getElementById('maintProgressBar');
     if (!logo) return;
 
     const HOLD_MS = 10000;
     let holdTimer = null;
-    let progressTimer = null;
+    let activePointerId = null;
     let startedAt = 0;
+    let startX = 0, startY = 0;
+    const MOVE_TOLERANCE = 60; // px — finger may shift while holding
+
+    function navigateToAdmin() {
+        cleanup();
+        window.location.href = 'admin.html';
+    }
 
     function startHold(e) {
         if (e && e.cancelable) { try { e.preventDefault(); } catch (_) {} }
         if (holdTimer) return;
         startedAt = Date.now();
-        if (wrap) wrap.style.opacity = '1';
-        if (bar)  bar.style.width = '0%';
-
-        progressTimer = setInterval(() => {
-            const pct = Math.min(100, ((Date.now() - startedAt) / HOLD_MS) * 100);
-            if (bar) bar.style.width = pct + '%';
-        }, 80);
-
-        holdTimer = setTimeout(() => {
-            cleanup();
-            // Loads admin.html where the user enters GLOKKSPAZ40123.
-            window.location.href = 'admin.html';
-        }, HOLD_MS);
+        if (e && e.pointerId != null) {
+            activePointerId = e.pointerId;
+            try { logo.setPointerCapture(e.pointerId); } catch(_) {}
+        }
+        const t = (e && e.touches && e.touches[0]) || e;
+        startX = (t && t.clientX) || 0;
+        startY = (t && t.clientY) || 0;
+        holdTimer = setTimeout(navigateToAdmin, HOLD_MS);
     }
 
     function cleanup() {
-        if (holdTimer)     { clearTimeout(holdTimer);   holdTimer = null; }
-        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+        if (activePointerId != null) {
+            try { logo.releasePointerCapture(activePointerId); } catch(_) {}
+            activePointerId = null;
+        }
     }
 
-    function cancelHold() {
-        cleanup();
-        if (bar)  bar.style.width = '0%';
-        if (wrap) wrap.style.opacity = '0';
+    function cancelHold(e) { cleanup(); }
+
+    function onMove(e) {
+        if (!holdTimer) return;
+        const t = (e && e.touches && e.touches[0]) || e;
+        if (!t) return;
+        const dx = (t.clientX || 0) - startX;
+        const dy = (t.clientY || 0) - startY;
+        if (Math.hypot(dx, dy) > MOVE_TOLERANCE) cleanup();
     }
 
-    logo.addEventListener('mousedown',  startHold);
-    logo.addEventListener('touchstart', startHold, { passive: false });
-    logo.addEventListener('mouseup',    cancelHold);
-    logo.addEventListener('mouseleave', cancelHold);
-    logo.addEventListener('touchend',   cancelHold);
-    logo.addEventListener('touchcancel',cancelHold);
-    // Block context menu on long-press (mobile) so the gesture isn't interrupted.
+    // Prefer Pointer Events when available (works for mouse + touch + pen).
+    if (window.PointerEvent) {
+        logo.addEventListener('pointerdown',   startHold);
+        logo.addEventListener('pointerup',     cancelHold);
+        logo.addEventListener('pointercancel', cancelHold);
+        logo.addEventListener('pointermove',   onMove);
+    } else {
+        logo.addEventListener('mousedown',  startHold);
+        logo.addEventListener('touchstart', startHold, { passive: false });
+        logo.addEventListener('mouseup',    cancelHold);
+        logo.addEventListener('touchend',   cancelHold);
+        logo.addEventListener('touchcancel',cancelHold);
+        logo.addEventListener('touchmove',  onMove, { passive: true });
+    }
+    // Block long-press menus / drag on mobile.
     logo.addEventListener('contextmenu', (e) => e.preventDefault());
+    logo.addEventListener('dragstart',   (e) => e.preventDefault());
+    logo.addEventListener('selectstart', (e) => e.preventDefault());
 };
 
 window.__mozpayCheckMaintenance = async function checkMaintenance() {
@@ -574,17 +591,21 @@ function initLoginScreen() {
                     }
 
                     // ── Validate invite code against real codes ───────────────
+                    // Two sources: (1) user-generated code stored in
+                    // user_preferences.invite_code, (2) admin-generated code
+                    // stored in invite_codes (single-use; "active" = no
+                    // used_by_user_id yet).
                     let invitedBy = null;
                     let validCodeSource = null;
                     try {
                         const [{ data: prefHit }, { data: codeHit }] = await Promise.all([
                             supabaseClient.from('user_preferences').select('user_id').eq('invite_code', inviteCodeVal).maybeSingle(),
-                            supabaseClient.from('invite_codes').select('code, is_active, max_uses, uses').eq('code', inviteCodeVal).maybeSingle()
+                            supabaseClient.from('invite_codes').select('code, used_by_user_id').eq('code', inviteCodeVal).maybeSingle()
                         ]);
                         if (prefHit?.user_id) {
                             invitedBy = prefHit.user_id;
                             validCodeSource = 'user';
-                        } else if (codeHit && codeHit.is_active && (codeHit.max_uses == null || (codeHit.uses || 0) < codeHit.max_uses)) {
+                        } else if (codeHit && !codeHit.used_by_user_id) {
                             validCodeSource = 'admin';
                         }
                     } catch(e) { console.warn('invite check failed:', e); }
@@ -701,11 +722,12 @@ function initLoginScreen() {
                                     invite_credit_given: false
                                 }, { onConflict: 'user_id' });
                                 if (validCodeSource === 'admin') {
-                                    try { await supabaseClient.rpc('increment_invite_code_uses', { p_code: inviteCodeVal }); }
-                                    catch(_) {
-                                        const { data: cur } = await supabaseClient.from('invite_codes').select('uses').eq('code', inviteCodeVal).maybeSingle();
-                                        await supabaseClient.from('invite_codes').update({ uses: (cur?.uses || 0) + 1 }).eq('code', inviteCodeVal);
-                                    }
+                                    // Mark the admin code as used (single-use schema).
+                                    try {
+                                        await supabaseClient.from('invite_codes')
+                                            .update({ used_by_user_id: newUserId, used_at: new Date().toISOString() })
+                                            .eq('code', inviteCodeVal);
+                                    } catch(e) { console.warn('mark code used failed:', e); }
                                 }
                             }
                         } catch(persistErr) { console.warn('[signup] post-create persist failed:', persistErr); }
